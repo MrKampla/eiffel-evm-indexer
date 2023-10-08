@@ -1,0 +1,18 @@
+version: '3'
+services:
+  indexer-and-api:
+    build: .
+    volumes:
+      - ./:/home/bun/app
+    command: bun dev
+    environment:
+      - CHAIN_ID=137
+      - CHAIN_RPC_URL=https://polygon-rpc.com/
+      - START_FROM_BLOCK=0
+      - BLOCK_CONFIRMATIONS=1
+      - BLOCK_FETCH_INTERVAL=5000
+      - BLOCK_FETCH_BATCH_SIZE=1000
+      - DB_URL=events.db
+      - API_PORT=80
+    ports:
+      - '8080:80'
