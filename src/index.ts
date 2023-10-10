@@ -11,6 +11,7 @@ const db: PersistanceObject = getDb({
   dbType: env.DB_TYPE,
   dbUrl: env.DB_URL,
   chainId: env.CHAIN_ID,
+  clearDb: env.CLEAR_DB,
 });
 
 new Indexer(db, viemEventsFetcher).run();

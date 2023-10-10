@@ -10,6 +10,7 @@ export class SqlitePersistance implements PersistanceObject {
   constructor(
     private chainId: number,
     dbUrl: string,
+    private clearDb: boolean = false,
   ) {
     this.db = new Database(dbUrl, { create: true });
   }
@@ -19,26 +20,32 @@ export class SqlitePersistance implements PersistanceObject {
   }
 
   private prepareEventsTable() {
+    if (this.clearDb) {
+      this.db.prepare('DROP TABLE IF EXISTS events').run();
+    }
     this.db
       .prepare(
         `CREATE TABLE IF NOT EXISTS events (
         id TEXT PRIMARY KEY,
         address TEXT,
-        blockNumber INTEGER,
-        eventName TEXT,
+        "blockNumber" INTEGER,
+        "eventName" TEXT,
         args TEXT,
-        chainId INTEGER
+        "chainId" INTEGER
         );`,
       )
       .run();
   }
 
   private prepareIndexingStatusTable() {
+    if (this.clearDb) {
+      this.db.prepare('DROP TABLE IF EXISTS indexing_status').run();
+    }
     this.db
       .prepare(
         `CREATE TABLE IF NOT EXISTS indexing_status (
-            chainId INTEGER PRIMARY KEY,
-        blockNumber INTEGER
+            "chainId" INTEGER PRIMARY KEY,
+            "blockNumber" INTEGER
         );`,
       )
       .run();

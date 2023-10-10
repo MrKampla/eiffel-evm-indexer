@@ -6,6 +6,7 @@ import { getDb } from '../utils/getDb';
 import { handleIndexingStatusRequest } from './requestHandlers/indexingStatusRequestHandler';
 import { logger } from '../utils/logger';
 import packageJson from '../../package.json';
+import { ResponseWithCors } from './responseWithCors';
 
 const data: PersistanceObject = getDb({
   dbType: env.DB_TYPE,
@@ -16,13 +17,18 @@ const data: PersistanceObject = getDb({
 const server = Bun.serve({
   port: env.API_PORT,
   async fetch(request) {
+    // Handle CORS preflight requests
+    if (request.method === 'OPTIONS') {
+      const res = new ResponseWithCors('Departed');
+      return res;
+    }
     return router(request, data)
       .when('/api/events', handleEventsRequest)
       .when('/api/indexing_status', handleIndexingStatusRequest)
       .when(
         '/',
         async () =>
-          new Response(
+          new ResponseWithCors(
             JSON.stringify({
               message: 'Welcome to EIFFEL API!',
               version: packageJson.version,

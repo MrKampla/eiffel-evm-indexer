@@ -41,3 +41,4 @@ const res = targetAbis.flatMap((target) =>
 );
 
 console.log(JSON.stringify(res));
+await fs.writeFile('./targets.json', JSON.stringify(res, null, 2));

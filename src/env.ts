@@ -53,4 +53,5 @@ export const env = {
   BLOCK_FETCH_BATCH_SIZE: BigInt(process.env.BLOCK_FETCH_BATCH_SIZE || 1000n),
   DB_TYPE: process.env.DB_TYPE || 'sqlite',
   DB_URL: process.env.DB_URL || 'events.db',
+  CLEAR_DB: process.env.CLEAR_DB === 'true',
 } as const;

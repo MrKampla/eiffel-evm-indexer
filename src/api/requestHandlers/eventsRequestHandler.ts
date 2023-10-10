@@ -3,6 +3,7 @@ import { parseEventArgs } from '../../utils/parseEventArgs';
 import { extractParamsFromUrl } from '../params/extractParamsFromUrl';
 import { parseFieldFilter } from '../params/parseFieldFilter';
 import { parseSortParam } from '../params/parseSortParam';
+import { ResponseWithCors } from '../responseWithCors';
 
 export const handleEventsRequest = async (request: Request, db: PersistanceObject) => {
   const { searchParams } = new URL(request.url);
@@ -27,7 +28,7 @@ export const handleEventsRequest = async (request: Request, db: PersistanceObjec
       ...(sortParam ? [sortParam, searchParamsEntries[sortParam]] : []),
     ].some((param) => allowedKeyPattern.test(param) === false)
   ) {
-    return new Response(
+    return new ResponseWithCors(
       JSON.stringify({
         error: 'Invalid key',
         message: 'Only alphanumeric characters and underscores are allowed',
@@ -83,8 +84,8 @@ export const handleEventsRequest = async (request: Request, db: PersistanceObjec
     .catch((e) => ({ isSuccess: false, value: e.message }));
 
   if (!isSuccess) {
-    return new Response(JSON.stringify({ error: value }), { status: 400 });
+    return new ResponseWithCors(JSON.stringify({ error: value }), { status: 400 });
   }
 
-  return new Response(value);
+  return new ResponseWithCors(value);
 };

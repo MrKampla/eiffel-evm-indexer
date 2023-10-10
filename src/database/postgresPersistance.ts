@@ -11,6 +11,7 @@ export class PostgresPersistance implements PersistanceObject {
   constructor(
     private chainId: number,
     dbUrl: string,
+    private clearDb: boolean = false,
   ) {
     this.sql = postgres(dbUrl, { ssl: true });
   }
@@ -20,6 +21,10 @@ export class PostgresPersistance implements PersistanceObject {
   }
 
   async init(): Promise<void> {
+    if (this.clearDb) {
+      await this.sql`DROP TABLE IF EXISTS events`;
+      await this.sql`DROP TABLE IF EXISTS indexing_status`;
+    }
     await this.sql.begin(async (tx) => {
       await tx`CREATE TABLE IF NOT EXISTS events (
         id TEXT PRIMARY KEY,
