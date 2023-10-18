@@ -31,7 +31,7 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
     let query = this._knexClient.select('*').from<T>(table);
 
     for (const c of whereClosures) {
-        query = c.field.includes('args')
+        c.field.includes('args')
           ? query.where(
               this._knexClient.raw(
                 `${this.getJsonObjectPropertySqlFragment(
@@ -46,7 +46,7 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
     
       for (const c of sortClosures) {
         if(c.type == FilterTypes.TEXT) {
-            query = c.field.includes('args')
+            c.field.includes('args')
             ? query.orderByRaw(
                 `${this.getJsonObjectPropertySqlFragment(
                   'args',
@@ -56,7 +56,7 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
             : query.orderByRaw(`${table}."${c.field}" ${c.direction}`);
         }
         else {
-            query = c.field.includes('args')
+            c.field.includes('args')
             ? query.orderByRaw(
                 `CAST(${this.getJsonObjectPropertySqlFragment(
                   'args',
@@ -68,11 +68,11 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
       }
     
       if (limit) {
-        query = query.limit(limit);
+        query.limit(limit);
       }
     
       if (offset >= 0) {
-        query = query.offset(offset);
+        query.offset(offset);
       }
 
       return this.queryAll<T>(query.toString());
