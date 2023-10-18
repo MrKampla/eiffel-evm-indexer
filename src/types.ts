@@ -1,16 +1,20 @@
 import { AbiItem } from 'viem';
+import { SortClosure, WhereClosure } from './database/filters';
 
 export type Hash = `0x${string}`;
 
-export interface PersistanceObject {
+export interface PersistenceObject {
   init(): Promise<void>;
   saveBatch(batch: EventLog[], blockNumber?: bigint): Promise<void>;
   getLatestIndexedBlockForChain(chainId: number): Promise<number | undefined>;
-  getJsonObjectPropertySqlFragment(column: string, propertyName: string): string;
-  queryAll<T>(query: string): Promise<T[]>;
-  queryOne<T>(query: string): Promise<T>;
-  queryRun(query: string): Promise<void>;
   disconnect(): Promise<void>;
+  filter<T extends {}>(
+    table: string,
+    whereClosures: WhereClosure[],
+    sortClosures: SortClosure[],
+    limit: number,
+    offset: number,
+  ): Promise<T[]> ;
 }
 
 export interface IndexerProps {

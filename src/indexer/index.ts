@@ -1,10 +1,10 @@
 import { env } from '../env';
-import { PersistanceObject, EventsFetcher } from '../types';
+import { PersistenceObject, EventsFetcher } from '../types';
 import { logger } from '../utils/logger';
 
 export class Indexer {
   constructor(
-    private db: PersistanceObject,
+    private db: PersistenceObject,
     private eventsFetcher: EventsFetcher,
   ) {}
 
@@ -17,10 +17,11 @@ export class Indexer {
     return BigInt(latestIndexedBlock) + 1n;
   }
 
-  async run() {
+  public async run(): Promise<void> {
     logger.log('***STARTING EIFFEL INDEXER***');
     console.log('\n\n');
     await this.db.init();
+    logger.log('DB initialized');
     const startingBlock = await this.getStartingBlock();
     logger.log(`Starting from block ${startingBlock}`);
 

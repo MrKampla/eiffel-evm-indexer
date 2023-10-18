@@ -17,4 +17,5 @@ export const env = {
   API_PORT: +(process.env.API_PORT || 8080),
   DB_TYPE: process.env.DB_TYPE || 'sqlite',
   DB_URL: process.env.DB_URL || 'events.db',
+  DB_SSL: process.env.DB_SSL === 'true',
 } as const;

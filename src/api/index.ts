@@ -12,6 +12,7 @@ const data: PersistanceObject = getDb({
   dbType: env.DB_TYPE,
   dbUrl: env.DB_URL,
   chainId: env.CHAIN_ID,
+  ssl: env.DB_SSL,
 });
 
 const server = Bun.serve({

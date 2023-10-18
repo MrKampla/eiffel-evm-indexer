@@ -1,27 +1,30 @@
 import { Database } from 'bun:sqlite';
-import { EventLog, PersistanceObject } from '../types';
+import { EventLog } from '../types';
 import { serialize } from '../utils/serializer';
 import { BIGINT_MATH } from '../utils/bigIntMath';
 import { createUniqueIdForEvent } from '../utils/createUniqueIdForEvent';
 import { logger } from '../utils/logger';
+import { SqlPersistenceBase } from './sqlPersistenceBase';
 
-export class SqlitePersistance implements PersistanceObject {
+export class SqlitePersistence extends SqlPersistenceBase {
   db: Database;
   constructor(
     private chainId: number,
     dbUrl: string,
     private clearDb: boolean = false,
   ) {
+    super('sqlite3');
     this.db = new Database(dbUrl, { create: true });
   }
 
-  async disconnect() {
+  public async disconnect(): Promise<void> {
     this.db.close();
   }
 
-  private prepareEventsTable() {
+  private prepareEventsTable(): void {
     if (this.clearDb) {
       this.db.prepare('DROP TABLE IF EXISTS events').run();
+      logger.log(`Dropped tables`);
     }
     this.db
       .prepare(
@@ -35,9 +38,10 @@ export class SqlitePersistance implements PersistanceObject {
         );`,
       )
       .run();
+    logger.log(`Initialized tables events and indexing_status`);
   }
 
-  private prepareIndexingStatusTable() {
+  private prepareIndexingStatusTable(): void {
     if (this.clearDb) {
       this.db.prepare('DROP TABLE IF EXISTS indexing_status').run();
     }
@@ -52,13 +56,14 @@ export class SqlitePersistance implements PersistanceObject {
   }
 
   async init() {
+    logger.log(`Initializing sqlite instance`);
     this.db.transaction(() => {
       this.prepareEventsTable();
       this.prepareIndexingStatusTable();
     })();
   }
 
-  async saveBatch(batch: EventLog[], latestBlockNumber?: bigint) {
+  public async saveBatch(batch: EventLog[], latestBlockNumber?: bigint) : Promise<void> {
     const latestIndexedBlock =
       latestBlockNumber ?? BIGINT_MATH.max(...batch.map((event) => event.blockNumber));
 
@@ -85,7 +90,7 @@ export class SqlitePersistance implements PersistanceObject {
     writeLogsBatch(batch);
   }
 
-  async getLatestIndexedBlockForChain(chainId: number) {
+  public async getLatestIndexedBlockForChain(chainId: number): Promise<number | undefined> {
     return (
       this.db
         .query(`SELECT blockNumber FROM indexing_status WHERE chainId = ${chainId}`)
@@ -93,21 +98,21 @@ export class SqlitePersistance implements PersistanceObject {
     )?.blockNumber;
   }
 
-  getJsonObjectPropertySqlFragment(column: string, propertyName: string): string {
-    return ` JSON_EXTRACT(${column}, '$.${propertyName}') `;
+  protected getJsonObjectPropertySqlFragment(column: string, propertyName: string): string {
+    return `JSON_EXTRACT(${column}, '$.${propertyName}') `;
   }
 
-  async queryAll<T>(query: string) {
+  protected async queryAll<T>(query: string): Promise<T[]> {
     logger.log(query);
     return Promise.resolve(this.db.query(query).all() as T[]);
   }
 
-  async queryOne<T>(query: string): Promise<T> {
+  public async queryOne<T>(query: string): Promise<T> {
     logger.log(query);
     return Promise.resolve(this.db.query(query).get() as T);
   }
 
-  async queryRun(query: string) {
+  public async queryRun(query: string): Promise<void> {
     logger.log(query);
     return Promise.resolve(this.db.prepare(query).run());
   }
