@@ -19,7 +19,6 @@ export class Indexer {
 
   public async run(): Promise<void> {
     logger.log('***STARTING EIFFEL INDEXER***');
-    console.log('\n\n');
     await this.db.init();
     logger.log('DB initialized');
     const startingBlock = await this.getStartingBlock();

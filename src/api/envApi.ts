@@ -18,4 +18,5 @@ export const env = {
   DB_TYPE: process.env.DB_TYPE || 'sqlite',
   DB_URL: process.env.DB_URL || 'events.db',
   DB_SSL: process.env.DB_SSL === 'true',
+  GPAPHQL: process.env.GPAPHQL === 'true',
 } as const;

@@ -34,6 +34,7 @@ export interface EventLog {
   blockNumber: bigint;
   eventName: string;
   args: Record<string, any>;
+  transactionHash: string;
 }
 
 export type EventLogFromDb = Omit<EventLog, 'args'> & { args: string };
@@ -67,4 +68,9 @@ export interface GetLogsParams {
 export interface BlockchainClient {
   getLatestBlockNumber(): Promise<bigint>;
   getLogs(params: GetLogsParams): Promise<EventLog[]>;
+}
+
+export interface IndexingStatus {
+  chainId: bigint
+  blockNumber: bigint
 }

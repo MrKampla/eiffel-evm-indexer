@@ -2,8 +2,6 @@ import { EventLogFromDb, PersistenceObject } from '../../types';
 import { parseEventArgs } from '../../utils/parseEventArgs';
 import { ResponseWithCors } from '../responseWithCors';
 import {
-  FilterOperators,
-  FilterTypes,
   SortClosure,
   WhereClosure,
 } from '../../database/filters';

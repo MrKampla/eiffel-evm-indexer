@@ -1,10 +1,10 @@
-import { PersistanceObject } from '../types';
+import { PersistenceObject } from '../types';
 import urlParser from 'node:url';
 import { ResponseWithCors } from './responseWithCors';
 
-type Handler = (request: Request, db: PersistanceObject) => Promise<Response>;
+type Handler = (request: Request, db: PersistenceObject) => Promise<Response>;
 
-export const router = (request: Request, db: PersistanceObject) => ({
+export const router = (request: Request, db: PersistenceObject) => ({
   handlers: [] as { path: string; handler: Handler }[],
   when(path: string, handler: Handler) {
     this.handlers.push({ path, handler });

@@ -18,7 +18,7 @@ export class PostgresPersistence extends SqlPersistenceBase {
     ssl: boolean = true,
   ) {
     super('pg');
-    this.sql = postgres(dbUrl, { ssl, debug: true });
+    this.sql = postgres(dbUrl, { ssl });
   }
 
   public disconnect(): Promise<void> {
@@ -28,25 +28,25 @@ export class PostgresPersistence extends SqlPersistenceBase {
   public async init(): Promise<void> {
     logger.log(`Initializing postgres instance`);
     if (this.clearDb) {
-      await this.sql`DROP TABLE IF EXISTS ${this.eventsCollectionName}`;
-      await this.sql`DROP TABLE IF EXISTS ${this.indexingCollectionName}`;
-      logger.log(`Dropped tables`);
+      await this.dropTables();
     }
     await this.sql.begin(async (tx) => {
-      await tx`CREATE TABLE IF NOT EXISTS ${this.eventsCollectionName} (
-      id TEXT PRIMARY KEY,
-      address TEXT,
-      "blockNumber" INTEGER,
-      "eventName" TEXT,
-      args TEXT,
-      "chainId" INTEGER
-    );`;
-      await tx`CREATE TABLE IF NOT EXISTS ${this.indexingCollectionName} (
-      "chainId" INTEGER PRIMARY KEY,
-      "blockNumber" INTEGER
-    );`;
+      await tx`CREATE TABLE IF NOT EXISTS events (
+        id TEXT PRIMARY KEY,
+        address TEXT,
+        "blockNumber" INTEGER,
+        "eventName" TEXT,
+        args TEXT,
+        "chainId" INTEGER,
+        "transactionHash" TEXT
+      );`;
+      await tx`CREATE TABLE IF NOT EXISTS indexing_status (
+        "chainId" INTEGER PRIMARY KEY,
+        "blockNumber" INTEGER
+      );`;
     });
-    logger.log(`Initialized tables ${this.eventsCollectionName} and ${this.indexingCollectionName}`);
+    logger.log(`Initialized tables ${this.eventsCollectionName} and ${this.indexingCollectionName}`,
+    );
   }
 
   public async saveBatch(
@@ -59,7 +59,7 @@ export class PostgresPersistence extends SqlPersistenceBase {
     await this.sql.begin(async (tx) => {
       await Promise.all(
         batch.map(async (event) => {
-          await tx`INSERT INTO ${this.eventsCollectionName} ${this.sql(
+          await tx`INSERT INTO events ${this.sql(
             {
               ...event,
               blockNumber: event.blockNumber.toString(),
@@ -73,10 +73,11 @@ export class PostgresPersistence extends SqlPersistenceBase {
             'eventName',
             'args',
             'chainId',
+            'transactionHash',
           )} ON CONFLICT(id) DO UPDATE SET "blockNumber"=excluded."blockNumber"`;
         }),
       );
-      await tx`INSERT INTO ${this.indexingCollectionName} ${this.sql({
+      await tx`INSERT INTO indexing_status ${this.sql({
         chainId: this.chainId.toString(),
         blockNumber: latestIndexedBlock?.toString(),
       })} ON CONFLICT("chainId") DO UPDATE SET "blockNumber"=excluded."blockNumber"`;
@@ -88,11 +89,14 @@ export class PostgresPersistence extends SqlPersistenceBase {
   ): Promise<number | undefined> {
     return (
       await this
-        .sql`SELECT "blockNumber" FROM ${this.indexingCollectionName} WHERE "chainId" = ${chainId}`
+        .sql`SELECT "blockNumber" FROM indexing_status WHERE "chainId" = ${chainId}`
     )[0]?.blockNumber;
   }
 
-  protected getJsonObjectPropertySqlFragment(column: string, propertyName: string): string {
+  protected getJsonObjectPropertySqlFragment(
+    column: string,
+    propertyName: string,
+  ): string {
     return `CAST(${column} AS json)->>'${propertyName}' `;
   }
 
@@ -100,5 +104,11 @@ export class PostgresPersistence extends SqlPersistenceBase {
     logger.log(query);
     const items = (await this.sql.unsafe(query)) as unknown as T[];
     return items;
+  }
+
+  protected async dropTables(): Promise<void> {
+    await this.sql`DROP TABLE IF EXISTS events`;
+    await this.sql`DROP TABLE IF EXISTS indexing_status`;
+    logger.log(`Dropped tables`);
   }
 }

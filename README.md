@@ -62,6 +62,7 @@ In order to run the indexer you don't have to write any code. Every contract can
      API_PORT: <number> default 8080
      DB_TYPE: <'postgres' | 'sqlite'> default: 'sqlite'
      DB_URL: <string> for postgres it is a connection string, for SQLite it can be a path to the file or in-memory specifier ('memory') default: 'events.db' (for SQLite).
+     GRAPHQL: <string> 'true' | 'false' - enables GraphQL API instead of rest
    ```
 
 4. run docker compose for dev or prod environment:
@@ -113,3 +114,51 @@ Requests to the `/api/events` endpoint are configurable with following query par
   - `/api/events?sort=blockNumber:INT:ASC`
   - `/api/events?sort=args_from:DESC`
   - `/api/events?sort=args_value:INT:DESC`
+
+If you are using GraphQL endpoint, then you should send GraphQL queries to `POST /api/graphql`.
+
+Example for events:
+```graphql
+query {
+  events(
+    where: [
+        {
+            field: "address",
+            operator: EQ,
+            value: "0x2791bca1f2de4661ed88a30c99a7a9449aa84174"
+        }
+    ],
+    sort: [
+        {
+            field: "address",
+            direction: DESC,
+            type: TEXT
+        }
+    ],
+    limit: 10,
+    offset: 20
+  ) {
+    id
+    address
+    blockNumber
+    eventName
+    args {
+      from
+      to
+      value
+    }
+    chainId
+  }
+}
+```
+
+For indexing status:
+
+```graphql
+query {
+    indexing_status {
+        blockNumber
+        chainId
+  }
+}
+```
