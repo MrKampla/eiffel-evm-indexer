@@ -1,11 +1,11 @@
-export interface WhereClosure {
+export interface WhereClause {
   field: string;
   operator: FilterOperators;
   type: FilterTypes;
   value: string;
 }
 
-export interface SortClosure {
+export interface SortClause {
   field: string;
   direction: 'ASC' | 'DESC';
   type: FilterTypes;

@@ -74,7 +74,7 @@ export class PostgresPersistence extends SqlPersistenceBase {
             'args',
             'chainId',
             'transactionHash',
-          )} ON CONFLICT(id) DO UPDATE SET "blockNumber"=excluded."blockNumber"`;
+          )} ON CONFLICT(id) DO UPDATE SET "blockNumber"=excluded."blockNumber", "transactionHash" = excluded."transactionHash"`;
         }),
       );
       await tx`INSERT INTO indexing_status ${this.sql({

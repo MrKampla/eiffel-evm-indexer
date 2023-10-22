@@ -1,18 +1,15 @@
 import { EventLogFromDb, PersistenceObject } from '../../types';
 import { parseEventArgs } from '../../utils/parseEventArgs';
 import { ResponseWithCors } from '../responseWithCors';
-import {
-  SortClosure,
-  WhereClosure,
-} from '../../database/filters';
-import { parseWhereClosure } from '../parsers/parseWhereClosure';
-import { parseSortClosure } from '../parsers/parseSortClosure';
+import { SortClause, WhereClause } from '../../database/filters';
+import { parseWhereClause } from '../parsers/parseWhereClause';
+import { parseSortClause } from '../parsers/parseSortClause';
 
 export const handleEventsRequest = async (request: Request, db: PersistenceObject) => {
   const { searchParams } = new URL(request.url);
 
-  let sort: SortClosure[] = [];
-  let wheres: WhereClosure[] = [];
+  let sort: SortClause[] = [];
+  let wheres: WhereClause[] = [];
   const limit = searchParams.get('limit');
   const offset = searchParams.get('offset');
 
@@ -20,13 +17,12 @@ export const handleEventsRequest = async (request: Request, db: PersistenceObjec
     wheres = searchParams
       .getAll('where')
       .flatMap((t) => t.split(','))
-      .map((t) => parseWhereClosure(t));
+      .map((t) => parseWhereClause(t));
 
     sort = searchParams
       .getAll('sort')
       .flatMap((t) => t.split(','))
-      .map((t) => parseSortClosure(t));
-
+      .map((t) => parseSortClause(t));
   } catch (e) {
     return new ResponseWithCors(
       JSON.stringify({
@@ -39,13 +35,13 @@ export const handleEventsRequest = async (request: Request, db: PersistenceObjec
   }
 
   const { isSuccess, value } = await db
-    .filter<EventLogFromDb>(
-      'events',
-      wheres,
-      sort,
-      limit ? parseInt(limit) : 100,
-      offset ? parseInt(offset) : 0,
-    )
+    .filter<EventLogFromDb>({
+      table: 'events',
+      whereClauses: wheres,
+      sortClauses: sort,
+      limit: limit ? parseInt(limit) : 100,
+      offset: offset ? parseInt(offset) : 0,
+    })
     .then((res) => ({
       isSuccess: true,
       value: JSON.stringify(res.map(parseEventArgs)),

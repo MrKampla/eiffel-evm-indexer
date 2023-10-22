@@ -1,10 +1,9 @@
 import { MongoClient, Db, Collection, Document, WithId } from 'mongodb';
 import { EventLog, PersistenceObject } from '../types';
 import { createUniqueIdForEvent } from '../utils/createUniqueIdForEvent';
-import { serialize } from '../utils/serializer';
 import { logger } from '../utils/logger';
 import { BIGINT_MATH } from '../utils/bigIntMath';
-import { WhereClosure, SortClosure, FilterOperators, FilterTypes } from './filters';
+import { WhereClause, SortClause, FilterOperators, FilterTypes } from './filters';
 
 export class MongoDBPersistence implements PersistenceObject {
   private client: MongoClient;
@@ -22,27 +21,36 @@ export class MongoDBPersistence implements PersistenceObject {
     this.client = new MongoClient(dbUrl);
   }
 
-  public async filter<T extends {}>(
-    table: string,
-    whereClosures: WhereClosure[],
-    sortClosures: SortClosure[],
-    limit: number,
-    offset: number,
-  ): Promise<T[]> {
+  public async filter<T extends {}>({
+    table,
+    whereClauses = [],
+    sortClauses = [],
+    limit = 100,
+    offset = 0,
+  }: {
+    table: string;
+    whereClauses: WhereClause[];
+    sortClauses: SortClause[];
+    limit: number;
+    offset: number;
+  }): Promise<T[]> {
     if (!this.db) throw new Error('Database not initialized');
 
     const mongoQuery = {
-      $and: whereClosures.map(this.convertWhereToMongoQuery),
+      $and: whereClauses.map(this.convertWhereToMongoQuery),
     };
-    const mongoSort = sortClosures.reduce((acc, sortClosure) => ({
-      ...acc,
-      ...this.convertSortToMongoSort(sortClosure)
-    }), {});
+    const mongoSort = sortClauses.reduce(
+      (acc, sortClouse) => ({
+        ...acc,
+        ...this.convertSortToMongoSort(sortClouse),
+      }),
+      {},
+    );
     const collection = this.db?.collection<T>(table);
-    
+
     let query = collection.find(mongoQuery).sort(mongoSort);
-    if(limit) query = query.limit(limit);
-    if(offset >= 0) query = query.skip(offset);
+    if (limit) query = query.limit(limit);
+    if (offset >= 0) query = query.skip(offset);
 
     const results = (await query.toArray()).map((result) => result as any);
     return results;
@@ -112,34 +120,34 @@ export class MongoDBPersistence implements PersistenceObject {
     return result?.blockNumber;
   }
 
-  private convertWhereToMongoQuery(whereClosure: WhereClosure): any {
-    switch (whereClosure.operator) {
+  private convertWhereToMongoQuery(whereClauses: WhereClause): any {
+    switch (whereClauses.operator) {
       case FilterOperators.EQ:
-        return { [whereClosure.field]: { $eq: this.convertValue(whereClosure) } };
+        return { [whereClauses.field]: { $eq: this.convertValue(whereClauses) } };
       case FilterOperators.GT:
-        return { [whereClosure.field]: { $gt: this.convertValue(whereClosure) } };
+        return { [whereClauses.field]: { $gt: this.convertValue(whereClauses) } };
       case FilterOperators.GTE:
-        return { [whereClosure.field]: { $gte: this.convertValue(whereClosure) } };
+        return { [whereClauses.field]: { $gte: this.convertValue(whereClauses) } };
       case FilterOperators.LT:
-        return { [whereClosure.field]: { $lt: this.convertValue(whereClosure) } };
+        return { [whereClauses.field]: { $lt: this.convertValue(whereClauses) } };
       case FilterOperators.LTE:
-        return { [whereClosure.field]: { $lte: this.convertValue(whereClosure) } };
+        return { [whereClauses.field]: { $lte: this.convertValue(whereClauses) } };
       case FilterOperators.NEQ:
-        return { [whereClosure.field]: { $ne: this.convertValue(whereClosure) } };
+        return { [whereClauses.field]: { $ne: this.convertValue(whereClauses) } };
       default:
         throw new Error('Invalid filter operator');
     }
   }
 
-  private convertValue(whereClosure: WhereClosure): string | number {
-    return whereClosure.type === FilterTypes.NUMBER
-      ? parseFloat(whereClosure.value)
-      : whereClosure.value;
+  private convertValue(whereClauses: WhereClause): string | number {
+    return whereClauses.type === FilterTypes.NUMBER
+      ? parseFloat(whereClauses.value)
+      : whereClauses.value;
   }
 
-  private convertSortToMongoSort(sortClosure: SortClosure): any {
+  private convertSortToMongoSort(sortClause: SortClause): any {
     return {
-      [sortClosure.field]: sortClosure.direction === 'ASC' ? 1 : -1,
+      [sortClause.field]: sortClause.direction === 'ASC' ? 1 : -1,
     };
   }
 }

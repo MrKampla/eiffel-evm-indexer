@@ -68,7 +68,7 @@ export class SqlitePersistence extends SqlPersistenceBase {
       latestBlockNumber ?? BIGINT_MATH.max(...batch.map((event) => event.blockNumber));
 
     const insertEventLog = this.db.prepare(
-      'INSERT INTO events (id, address, blockNumber, eventName, chainId, args) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET blockNumber=excluded.blockNumber',
+      'INSERT INTO events (id, address, blockNumber, eventName, chainId, args) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET blockNumber=excluded.blockNumber, transactionHash = excluded.transactionHash',
     );
     const insertIndexingStatus = this.db.prepare(
       'INSERT INTO indexing_status (chainId, blockNumber) VALUES (?, ?) ON CONFLICT(chainId) DO UPDATE SET blockNumber = excluded.blockNumber',

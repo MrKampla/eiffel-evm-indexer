@@ -1,9 +1,9 @@
-import { FilterTypes, SortClosure } from '../../database/filters';
+import { FilterTypes, SortClause } from '../../database/filters';
 
-export const parseSortClosure = (
+export const parseSortClause = (
   t: string,
   allowedKeyPattern = /^[a-zA-Z0-9_]*$/,
-): SortClosure => {
+): SortClause => {
   const tokens = t.trim().split(':');
   let [field, typeEnum, directionEnum] =
     tokens.length === 3 ? tokens : [tokens[0], undefined, tokens[1]];

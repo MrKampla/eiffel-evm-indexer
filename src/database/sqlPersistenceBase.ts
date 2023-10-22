@@ -1,11 +1,11 @@
 import { knex } from 'knex';
 import { EventLog, PersistenceObject } from '../types';
-import { FilterOperators, FilterTypes, SortClosure, WhereClosure } from './filters';
+import { FilterOperators, FilterTypes, SortClause, WhereClause } from './filters';
 
 export abstract class SqlPersistenceBase implements PersistenceObject {
   protected readonly _knexClient: knex.Knex;
-  
-  constructor(client: 'pg'|'sqlite3') {
+
+  constructor(client: 'pg' | 'sqlite3') {
     this._knexClient = knex({ client });
   }
 
@@ -15,67 +15,81 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
 
   abstract getLatestIndexedBlockForChain(chainId: number): Promise<number | undefined>;
 
-  protected abstract getJsonObjectPropertySqlFragment(column: string, propertyName: string): string;
+  protected abstract getJsonObjectPropertySqlFragment(
+    column: string,
+    propertyName: string,
+  ): string;
 
   protected abstract queryAll<T>(query: string): Promise<T[]>;
 
   abstract disconnect(): Promise<void>;
 
-  public async filter<T extends {}>(
-    table: string,
-    whereClosures: WhereClosure[] = [],
-    sortClosures: SortClosure[] = [],
-    limit: number = 100,
-    offset: number = 0,
-  ): Promise<T[]> {
+  public async filter<T extends {}>({
+    table,
+    whereClauses = [],
+    sortClauses = [],
+    limit = 100,
+    offset = 0,
+  }: {
+    table: string;
+    whereClauses: WhereClause[];
+    sortClauses: SortClause[];
+    limit: number;
+    offset: number;
+  }): Promise<T[]> {
     let query = this._knexClient.select('*').from<T>(table);
 
-    for (const c of whereClosures) {
-        c.field.includes('args')
-          ? query.where(
-              this._knexClient.raw(
-                `${this.getJsonObjectPropertySqlFragment(
-                  'args',
-                  c.field.slice(5),
-                )} ${this.getSqlOperator(c.operator)} ?`,
-                [this.convert(c.value, c.type)],
-              ),
-            )
-          : query.where(this._knexClient.raw(`${table}."${c.field}" ${this.getSqlOperator(c.operator)} ?`, [this.convert(c.value, c.type)]));
-      }
-    
-      for (const c of sortClosures) {
-        if(c.type == FilterTypes.TEXT) {
-            c.field.includes('args')
-            ? query.orderByRaw(
-                `${this.getJsonObjectPropertySqlFragment(
-                  'args',
-                  c.field.slice(5),
-                )} ${c.direction}`,
-              )
-            : query.orderByRaw(`${table}."${c.field}" ${c.direction}`);
-        }
-        else {
-            c.field.includes('args')
-            ? query.orderByRaw(
-                `CAST(${this.getJsonObjectPropertySqlFragment(
-                  'args',
-                  c.field.slice(5),
-                )} AS numeric) ${c.direction}`,
-              )
-            : query.orderByRaw(`CAST(${table}."${c.field}" AS numeric) ${c.direction}`);
-        }
-      }
-    
-      if (limit) {
-        query.limit(limit);
-      }
-    
-      if (offset >= 0) {
-        query.offset(offset);
-      }
+    for (const clause of whereClauses) {
+      clause.field.includes('args')
+        ? query.where(
+            this._knexClient.raw(
+              `${this.getJsonObjectPropertySqlFragment(
+                'args',
+                clause.field.slice(5),
+              )} ${this.getSqlOperator(clause.operator)} ?`,
+              [this.convert(clause.value, clause.type)],
+            ),
+          )
+        : query.where(
+            this._knexClient.raw(
+              `${table}."${clause.field}" ${this.getSqlOperator(clause.operator)} ?`,
+              [this.convert(clause.value, clause.type)],
+            ),
+          );
+    }
 
-      return this.queryAll<T>(query.toString());
+    for (const clause of sortClauses) {
+      if (clause.type == FilterTypes.TEXT) {
+        clause.field.includes('args')
+          ? query.orderByRaw(
+              `${this.getJsonObjectPropertySqlFragment('args', clause.field.slice(5))} ${
+                clause.direction
+              }`,
+            )
+          : query.orderByRaw(`${table}."${clause.field}" ${clause.direction}`);
+      } else {
+        clause.field.includes('args')
+          ? query.orderByRaw(
+              `CAST(${this.getJsonObjectPropertySqlFragment(
+                'args',
+                clause.field.slice(5),
+              )} AS numeric) ${clause.direction}`,
+            )
+          : query.orderByRaw(
+              `CAST(${table}."${clause.field}" AS numeric) ${clause.direction}`,
+            );
+      }
+    }
+
+    if (limit) {
+      query.limit(limit);
+    }
+
+    if (offset >= 0) {
+      query.offset(offset);
+    }
+
+    return this.queryAll<T>(query.toString());
   }
 
   protected getSqlOperator(operator: FilterOperators): string | undefined {

@@ -8,8 +8,8 @@ const db = getDb({
   ssl: env.DB_SSL,
 });
 
-console.log(await db.filter('events', [], [], 0, 0));
-console.log(await db.filter('indexing_status', [], [], 0, 0));
+console.log(await db.filter({ table: 'events', limit: 0 }));
+console.log(await db.filter({ table: 'indexing_status', limit: 0 }));
 
 await db.disconnect();
 process.exit();

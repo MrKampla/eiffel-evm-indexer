@@ -142,11 +142,7 @@ query {
     address
     blockNumber
     eventName
-    args {
-      from
-      to
-      value
-    }
+    args
     chainId
   }
 }

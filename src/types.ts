@@ -1,5 +1,5 @@
 import { AbiItem } from 'viem';
-import { SortClosure, WhereClosure } from './database/filters';
+import { SortClause, WhereClause } from './database/filters';
 
 export type Hash = `0x${string}`;
 
@@ -8,13 +8,19 @@ export interface PersistenceObject {
   saveBatch(batch: EventLog[], blockNumber?: bigint): Promise<void>;
   getLatestIndexedBlockForChain(chainId: number): Promise<number | undefined>;
   disconnect(): Promise<void>;
-  filter<T extends {}>(
-    table: string,
-    whereClosures: WhereClosure[],
-    sortClosures: SortClosure[],
-    limit: number,
-    offset: number,
-  ): Promise<T[]> ;
+  filter<T extends {}>({
+    table,
+    whereClauses = [],
+    sortClauses = [],
+    limit = 100,
+    offset = 0,
+  }: {
+    table: string;
+    whereClauses?: WhereClause[];
+    sortClauses?: SortClause[];
+    limit?: number;
+    offset?: number;
+  }): Promise<T[]>;
 }
 
 export interface IndexerProps {
@@ -71,6 +77,6 @@ export interface BlockchainClient {
 }
 
 export interface IndexingStatus {
-  chainId: bigint
-  blockNumber: bigint
+  chainId: bigint;
+  blockNumber: bigint;
 }
