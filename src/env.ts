@@ -34,11 +34,15 @@ if (TARGETS) {
 if (!process.env.START_FROM_BLOCK) {
   throw new Error('START_FROM_BLOCK not set');
 }
-if (![undefined, 'sqlite', 'postgres'].includes(process.env.DB_TYPE)) {
+if (![undefined, 'sqlite', 'postgres', 'mongo'].includes(process.env.DB_TYPE)) {
   throw new Error('DB_TYPE is only allowed to be "sqlite" or "postgres"');
 }
 if (process.env.DB_TYPE === 'postgres' && !process.env.DB_URL) {
   throw new Error('postgres DB_URL not set');
+}
+
+if(process.env.DB_TYPE === 'mongo' && !process.env.DB_NAME?.length) {
+  throw new Error('mogno DB_NAME is not set');
 }
 
 export const env = {
@@ -55,4 +59,5 @@ export const env = {
   DB_URL: process.env.DB_URL || 'events.db',
   DB_SSL: process.env.DB_SSL === 'true',
   CLEAR_DB: process.env.CLEAR_DB === 'true',
+  DB_NAME: process.env.DB_NAME,
 } as const;

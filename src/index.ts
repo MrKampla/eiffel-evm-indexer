@@ -13,6 +13,7 @@ const db: PersistenceObject = getDb({
   chainId: env.CHAIN_ID,
   clearDb: env.CLEAR_DB,
   ssl: env.DB_SSL,
+  dbName: env.DB_NAME
 });
 
 new Indexer(db, viemEventsFetcher).run();

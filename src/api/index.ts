@@ -7,15 +7,16 @@ import { handleIndexingStatusRequest } from './requestHandlers/indexingStatusReq
 import { logger } from '../utils/logger';
 import packageJson from '../../package.json';
 import { ResponseWithCors } from './responseWithCors';
-import { createYoga } from 'graphql-yoga'
-import { createGraphqlServer, schema } from './graphql';
+import { createGraphqlServer } from './graphql';
 
 const data: PersistenceObject = getDb({
   dbType: env.DB_TYPE,
   dbUrl: env.DB_URL,
   chainId: env.CHAIN_ID,
   ssl: env.DB_SSL,
+  dbName: env.DB_NAME
 });
+
 
 const yoga = createGraphqlServer(data);
 
@@ -45,6 +46,7 @@ const server = env.GPAPHQL ? Bun.serve({fetch: yoga.fetch.bind(yoga), port: env.
 });
 
 logger.log(`Listening on ${server.hostname}:${server.port}`);
+data.init();
 
 process.on('exit', () => {
   data.disconnect();

@@ -1,9 +1,10 @@
-import { MongoClient, Db, Collection, Document, WithId } from 'mongodb';
+import { MongoClient, Db, Collection, Document } from 'mongodb';
 import { EventLog, PersistenceObject } from '../types';
 import { createUniqueIdForEvent } from '../utils/createUniqueIdForEvent';
 import { logger } from '../utils/logger';
 import { BIGINT_MATH } from '../utils/bigIntMath';
 import { WhereClause, SortClause, FilterOperators, FilterTypes } from './filters';
+import { serialize } from '../utils/serializer';
 
 export class MongoDBPersistence implements PersistenceObject {
   private client: MongoClient;
@@ -37,8 +38,9 @@ export class MongoDBPersistence implements PersistenceObject {
     if (!this.db) throw new Error('Database not initialized');
 
     const mongoQuery = {
-      $and: whereClauses.map(this.convertWhereToMongoQuery),
+      $and: whereClauses.map(this.convertWhereToMongoQuery.bind(this)),
     };
+
     const mongoSort = sortClauses.reduce(
       (acc, sortClouse) => ({
         ...acc,
@@ -46,13 +48,15 @@ export class MongoDBPersistence implements PersistenceObject {
       }),
       {},
     );
-    const collection = this.db?.collection<T>(table);
 
-    let query = collection.find(mongoQuery).sort(mongoSort);
+    const collection = this.db?.collection<T>(table);
+    let query = collection.find(whereClauses?.length ? mongoQuery : {});
+
+    if (sortClauses?.length) query = query.sort(mongoSort);
     if (limit) query = query.limit(limit);
     if (offset >= 0) query = query.skip(offset);
-
-    const results = (await query.toArray()).map((result) => result as any);
+    
+    const results = (await query.toArray()).map((result) => result as T);
     return results;
   }
 
@@ -66,13 +70,19 @@ export class MongoDBPersistence implements PersistenceObject {
     await this.client.connect();
     this.db = this.client.db(this.dbName);
 
+    const collections = await this.db.listCollections().toArray();
+
     if (this.clearDb) {
-      await this.db.dropCollection(this.eventsCollectionName);
-      await this.db.dropCollection(this.indexingCollectionName);
+      if(collections.some(col => col.name === this.eventsCollectionName))
+        await this.db.dropCollection(this.eventsCollectionName);
+      if(collections.some(col => col.name === this.indexingCollectionName))
+        await this.db.dropCollection(this.indexingCollectionName);
       logger.log(`Dropped collections`);
     }
-    this.db.createCollection(this.eventsCollectionName);
-    this.db.createCollection(this.indexingCollectionName);
+    if(!collections.some(col => col.name === this.eventsCollectionName))
+      await this.db.createCollection(this.eventsCollectionName);
+    if(!collections.some(col => col.name === this.indexingCollectionName))
+      await this.db.createCollection(this.indexingCollectionName);
     logger.log(`Initialized collections`);
   }
 
@@ -81,6 +91,7 @@ export class MongoDBPersistence implements PersistenceObject {
     latestBlockNumber?: bigint | undefined,
   ): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
+    if(batch.length === 0) return;
 
     const eventsCollection: Collection = this.db.collection(this.eventsCollectionName);
     const indexingStatusCollection: Collection = this.db.collection(
@@ -95,6 +106,7 @@ export class MongoDBPersistence implements PersistenceObject {
       blockNumber: event.blockNumber.toString(),
       id: createUniqueIdForEvent(event),
       chainId: this.chainId.toString(),
+      args: serialize(event.args),
     }));
 
     await eventsCollection.insertMany(transformedEvents, { ordered: false });
@@ -120,20 +132,20 @@ export class MongoDBPersistence implements PersistenceObject {
     return result?.blockNumber;
   }
 
-  private convertWhereToMongoQuery(whereClauses: WhereClause): any {
-    switch (whereClauses.operator) {
+  private convertWhereToMongoQuery(whereClause: WhereClause): any {
+    switch (whereClause.operator) {
       case FilterOperators.EQ:
-        return { [whereClauses.field]: { $eq: this.convertValue(whereClauses) } };
+        return { [whereClause.field]: { $eq: this.convertValue(whereClause) } };
       case FilterOperators.GT:
-        return { [whereClauses.field]: { $gt: this.convertValue(whereClauses) } };
+        return { [whereClause.field]: { $gt: this.convertValue(whereClause) } };
       case FilterOperators.GTE:
-        return { [whereClauses.field]: { $gte: this.convertValue(whereClauses) } };
+        return { [whereClause.field]: { $gte: this.convertValue(whereClause) } };
       case FilterOperators.LT:
-        return { [whereClauses.field]: { $lt: this.convertValue(whereClauses) } };
+        return { [whereClause.field]: { $lt: this.convertValue(whereClause) } };
       case FilterOperators.LTE:
-        return { [whereClauses.field]: { $lte: this.convertValue(whereClauses) } };
+        return { [whereClause.field]: { $lte: this.convertValue(whereClause) } };
       case FilterOperators.NEQ:
-        return { [whereClauses.field]: { $ne: this.convertValue(whereClauses) } };
+        return { [whereClause.field]: { $ne: this.convertValue(whereClause) } };
       default:
         throw new Error('Invalid filter operator');
     }

@@ -1,3 +1,5 @@
+// TODO: code duplication with indexer validation
+
 if (!process.env.CHAIN_ID) {
   throw new Error('CHAIN_ID not set');
 }
@@ -5,11 +7,15 @@ if (isNaN(+process.env.CHAIN_ID)) {
   throw new Error('CHAIN_ID must be a number');
 }
 
-if (![undefined, 'sqlite', 'postgres'].includes(process.env.DB_TYPE)) {
+if (![undefined, 'sqlite', 'postgres', 'mongo'].includes(process.env.DB_TYPE)) {
   throw new Error('DB_TYPE is only allowed to be "sqlite" or "postgres"');
 }
 if (process.env.DB_TYPE === 'postgres' && !process.env.DB_URL) {
   throw new Error('postgres DB_URL not set');
+}
+
+if(process.env.DB_TYPE === 'mongo' && !process.env.DB_NAME?.length) {
+  throw new Error('mogno DB_NAME is not set');
 }
 
 export const env = {
@@ -19,4 +25,5 @@ export const env = {
   DB_URL: process.env.DB_URL || 'events.db',
   DB_SSL: process.env.DB_SSL === 'true',
   GPAPHQL: process.env.GPAPHQL === 'true',
+  DB_NAME: process.env.DB_NAME
 } as const;
