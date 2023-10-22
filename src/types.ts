@@ -1,16 +1,26 @@
 import { AbiItem } from 'viem';
+import { SortClause, WhereClause } from './database/filters';
 
 export type Hash = `0x${string}`;
 
-export interface PersistanceObject {
+export interface PersistenceObject {
   init(): Promise<void>;
   saveBatch(batch: EventLog[], blockNumber?: bigint): Promise<void>;
   getLatestIndexedBlockForChain(chainId: number): Promise<number | undefined>;
-  getJsonObjectPropertySqlFragment(column: string, propertyName: string): string;
-  queryAll<T>(query: string): Promise<T[]>;
-  queryOne<T>(query: string): Promise<T>;
-  queryRun(query: string): Promise<void>;
   disconnect(): Promise<void>;
+  filter<T extends {}>({
+    table,
+    whereClauses = [],
+    sortClauses = [],
+    limit = 100,
+    offset = 0,
+  }: {
+    table: string;
+    whereClauses?: WhereClause[];
+    sortClauses?: SortClause[];
+    limit?: number;
+    offset?: number;
+  }): Promise<T[]>;
 }
 
 export interface IndexerProps {
@@ -30,6 +40,7 @@ export interface EventLog {
   blockNumber: bigint;
   eventName: string;
   args: Record<string, any>;
+  transactionHash: string;
 }
 
 export type EventLogFromDb = Omit<EventLog, 'args'> & { args: string };
@@ -63,4 +74,9 @@ export interface GetLogsParams {
 export interface BlockchainClient {
   getLatestBlockNumber(): Promise<bigint>;
   getLogs(params: GetLogsParams): Promise<EventLog[]>;
+}
+
+export interface IndexingStatus {
+  chainId: bigint;
+  blockNumber: bigint;
 }

@@ -1,29 +1,34 @@
 import postgres, { Sql } from 'postgres';
-import { EventLog, PersistanceObject } from '../types';
+import { EventLog } from '../types';
 import { BIGINT_MATH } from '../utils/bigIntMath';
 import { createUniqueIdForEvent } from '../utils/createUniqueIdForEvent';
 import { serialize } from '../utils/serializer';
 import { logger } from '../utils/logger';
+import { SqlPersistenceBase } from './sqlPersistenceBase';
 
-export class PostgresPersistance implements PersistanceObject {
+export class PostgresPersistence extends SqlPersistenceBase {
   private sql: Sql;
+  private readonly indexingCollectionName = 'indexing_status';
+  private readonly eventsCollectionName = 'events';
 
   constructor(
     private chainId: number,
     dbUrl: string,
     private clearDb: boolean = false,
+    ssl: boolean = true,
   ) {
-    this.sql = postgres(dbUrl, { ssl: true });
+    super('pg');
+    this.sql = postgres(dbUrl, { ssl });
   }
 
-  async disconnect(): Promise<void> {
-    await this.sql.end();
+  public disconnect(): Promise<void> {
+    return this.sql.end();
   }
 
-  async init(): Promise<void> {
+  public async init(): Promise<void> {
+    logger.log(`Initializing postgres instance`);
     if (this.clearDb) {
-      await this.sql`DROP TABLE IF EXISTS events`;
-      await this.sql`DROP TABLE IF EXISTS indexing_status`;
+      await this.dropTables();
     }
     await this.sql.begin(async (tx) => {
       await tx`CREATE TABLE IF NOT EXISTS events (
@@ -32,16 +37,19 @@ export class PostgresPersistance implements PersistanceObject {
         "blockNumber" INTEGER,
         "eventName" TEXT,
         args TEXT,
-        "chainId" INTEGER
+        "chainId" INTEGER,
+        "transactionHash" TEXT
       );`;
       await tx`CREATE TABLE IF NOT EXISTS indexing_status (
         "chainId" INTEGER PRIMARY KEY,
         "blockNumber" INTEGER
       );`;
     });
+    logger.log(`Initialized tables ${this.eventsCollectionName} and ${this.indexingCollectionName}`,
+    );
   }
 
-  async saveBatch(
+  public async saveBatch(
     batch: EventLog[],
     latestBlockNumber?: bigint | undefined,
   ): Promise<void> {
@@ -65,7 +73,8 @@ export class PostgresPersistance implements PersistanceObject {
             'eventName',
             'args',
             'chainId',
-          )} ON CONFLICT(id) DO UPDATE SET "blockNumber"=excluded."blockNumber"`;
+            'transactionHash',
+          )} ON CONFLICT(id) DO UPDATE SET "blockNumber"=excluded."blockNumber", "transactionHash" = excluded."transactionHash"`;
         }),
       );
       await tx`INSERT INTO indexing_status ${this.sql({
@@ -74,28 +83,32 @@ export class PostgresPersistance implements PersistanceObject {
       })} ON CONFLICT("chainId") DO UPDATE SET "blockNumber"=excluded."blockNumber"`;
     });
   }
-  async getLatestIndexedBlockForChain(chainId: number): Promise<number | undefined> {
+
+  public async getLatestIndexedBlockForChain(
+    chainId: number,
+  ): Promise<number | undefined> {
     return (
       await this
         .sql`SELECT "blockNumber" FROM indexing_status WHERE "chainId" = ${chainId}`
     )[0]?.blockNumber;
   }
-  getJsonObjectPropertySqlFragment(column: string, propertyName: string): string {
-    return ` CAST(${column} AS json)->>'${propertyName}' `;
-    // return ` to_json(${column})->>'${propertyName}' `;
+
+  protected getJsonObjectPropertySqlFragment(
+    column: string,
+    propertyName: string,
+  ): string {
+    return `CAST(${column} AS json)->>'${propertyName}' `;
   }
-  async queryAll<T>(query: string): Promise<T[]> {
+
+  protected async queryAll<T>(query: string): Promise<T[]> {
     logger.log(query);
     const items = (await this.sql.unsafe(query)) as unknown as T[];
     return items;
   }
-  async queryOne<T>(query: string): Promise<T> {
-    logger.log(query);
-    const items = (await this.sql.unsafe(query)) as unknown as T[];
-    return items[0];
-  }
-  async queryRun(query: string): Promise<void> {
-    logger.log(query);
-    await this.sql`${query}`;
+
+  protected async dropTables(): Promise<void> {
+    await this.sql`DROP TABLE IF EXISTS events`;
+    await this.sql`DROP TABLE IF EXISTS indexing_status`;
+    logger.log(`Dropped tables`);
   }
 }

@@ -19,7 +19,11 @@
   },
   "dependencies": {
     "commander": "^11.0.0",
-    "postgres": "^3.3.5",
+    "graphql": "^16.8.1",
+    "graphql-yoga": "^5.0.0",
+    "knex": "^3.0.1",
+    "mongodb": "^6.1.0",
+    "postgres": "3.3.4",
     "viem": "^1.15.1",
     "zod": "^3.22.4"
   }

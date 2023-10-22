@@ -62,6 +62,7 @@ In order to run the indexer you don't have to write any code. Every contract can
      API_PORT: <number> default 8080
      DB_TYPE: <'postgres' | 'sqlite'> default: 'sqlite'
      DB_URL: <string> for postgres it is a connection string, for SQLite it can be a path to the file or in-memory specifier ('memory') default: 'events.db' (for SQLite).
+     GRAPHQL: <string> 'true' | 'false' - enables GraphQL API instead of rest
    ```
 
 4. run docker compose for dev or prod environment:
@@ -100,16 +101,60 @@ You can query them with the following API endpoints:
 
 Requests to the `/api/events` endpoint are configurable with following query parameters:
 
-- top level fields of the `EventLog` interface e.g. `address`, `blockNumber`, `eventName`, `chainId`
-  - `/api/events?address=0x123&blockNumber=1234&eventName=Transfer`
-- event arguments of the event in the `args` field (custom to every contract event) e.g. for ERC-20 transfer event: `args.amount`, `args.from`, `args.to`
-  - `/api/events?args_amount=1000&args_from=0x123&args_to=0x456`
-- filters (lt, lte, gt, gte, eq, neq) for top level fields and event arguments
-  - `/api/events?filter_lt_blockNumber=1000&filter_gte_args_amount=1000`
+- filters (EQ, LT, LTE, GT, GTE, NEQ)
+  - `/api/events?where=address:EQ:0x2791bca1f2de4661ed88a30c99a7a9449aa84174&where=blockNumber:GT:INT:48358310`
+  OR
+  - `/api/events?where=address:EQ:0x2791bca1f2de4661ed88a30c99a7a9449aa84174,blockNumber:GT:INT:48358310`
+  OR 
+  - `/api/events?where=args_from:NEQ:0x25aB3Efd52e6470681CE037cD546Dc60726948D3,args_value:EQ:1053362095,blockNumber:GT:INT:48358310`
 - pagination (limit, offset)
   - `/api/events?limit=10&offset=10`
 - sorting (numeric sorting and text sorting) over top level fields or event arguments (asc, desc)
-  - `/api/events?sort_text_address=asc`
-  - `/api/events?sort_int_blockNumber=asc`
-  - `/api/events?sort_text_args_user=desc`
-  - `/api/events?sort_int_args_amount=desc`
+  - `/api/events?sort=address:ASC`
+  - `/api/events?sort=blockNumber:INT:ASC`
+  - `/api/events?sort=args_from:DESC`
+  - `/api/events?sort=args_value:INT:DESC`
+
+If you are using GraphQL endpoint, then you should send GraphQL queries to `POST /api/graphql`.
+
+Example for events:
+```graphql
+query {
+  events(
+    where: [
+        {
+            field: "address",
+            operator: EQ,
+            value: "0x2791bca1f2de4661ed88a30c99a7a9449aa84174"
+        }
+    ],
+    sort: [
+        {
+            field: "address",
+            direction: DESC,
+            type: TEXT
+        }
+    ],
+    limit: 10,
+    offset: 20
+  ) {
+    id
+    address
+    blockNumber
+    eventName
+    args
+    chainId
+  }
+}
+```
+
+For indexing status:
+
+```graphql
+query {
+    indexing_status {
+        blockNumber
+        chainId
+  }
+}
+```

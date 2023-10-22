@@ -1,82 +1,47 @@
-import { EventLogFromDb, PersistanceObject } from '../../types';
+import { EventLogFromDb, PersistenceObject } from '../../types';
 import { parseEventArgs } from '../../utils/parseEventArgs';
-import { extractParamsFromUrl } from '../params/extractParamsFromUrl';
-import { parseFieldFilter } from '../params/parseFieldFilter';
-import { parseSortParam } from '../params/parseSortParam';
 import { ResponseWithCors } from '../responseWithCors';
+import { SortClause, WhereClause } from '../../database/filters';
+import { parseWhereClause } from '../parsers/parseWhereClause';
+import { parseSortClause } from '../parsers/parseSortClause';
 
-export const handleEventsRequest = async (request: Request, db: PersistanceObject) => {
+export const handleEventsRequest = async (request: Request, db: PersistenceObject) => {
   const { searchParams } = new URL(request.url);
-  const searchParamsEntries = Object.fromEntries(searchParams);
 
-  const { eventArgsParams, filters, paginationParams, sortParam, topLevelParams } =
-    extractParamsFromUrl(searchParamsEntries);
+  let sort: SortClause[] = [];
+  let wheres: WhereClause[] = [];
+  const limit = searchParams.get('limit');
+  const offset = searchParams.get('offset');
 
-  // params validation
-  const allowedKeyPattern = /^[a-zA-Z0-9_]*$/; // prevents SQL injection
-  if (
-    [
-      ...topLevelParams,
-      ...topLevelParams.map((topLevelParam) => searchParamsEntries[topLevelParam]),
-      ...eventArgsParams,
-      ...eventArgsParams.map(
-        (eventArgParam) => searchParamsEntries[`args_${eventArgParam}`],
-      ),
-      ...filters,
-      ...filters.map((filter) => searchParamsEntries[filter]),
-      ...paginationParams.map((paginationParam) => searchParamsEntries[paginationParam]),
-      ...(sortParam ? [sortParam, searchParamsEntries[sortParam]] : []),
-    ].some((param) => allowedKeyPattern.test(param) === false)
-  ) {
+  try {
+    wheres = searchParams
+      .getAll('where')
+      .flatMap((t) => t.split(','))
+      .map((t) => parseWhereClause(t));
+
+    sort = searchParams
+      .getAll('sort')
+      .flatMap((t) => t.split(','))
+      .map((t) => parseSortClause(t));
+  } catch (e) {
     return new ResponseWithCors(
       JSON.stringify({
         error: 'Invalid key',
-        message: 'Only alphanumeric characters and underscores are allowed',
+        message:
+          'Only alphanumeric characters and underscores are allowed in where and sort',
       }),
       { status: 400 },
     );
   }
 
-  const allConditions = [
-    topLevelParams.map((key) => `events."${key}" = '${searchParamsEntries[key]}'`),
-    eventArgsParams.map(
-      (key) =>
-        `${db.getJsonObjectPropertySqlFragment('events.args', key)} = '${
-          searchParamsEntries[`args_${key}`]
-        }'`,
-    ),
-    filters.map((key) => parseFieldFilter(db, key, searchParamsEntries)),
-  ]
-    .flat()
-    .filter(Boolean);
-
-  const sortCondition = parseSortParam(db, sortParam);
-
-  const paginationAndSorting = [
-    sortParam ? [`ORDER BY ${sortCondition} ${searchParamsEntries[sortParam]}`] : [],
-    paginationParams.map((key) => {
-      const value = searchParamsEntries[key];
-      const paginationParamToSql = {
-        limit: 'LIMIT',
-        offset: 'OFFSET',
-      };
-      return `${paginationParamToSql[key as keyof typeof paginationParamToSql]} ${value}`;
-    }),
-  ]
-    .flat()
-    .filter(Boolean);
-
-  const SELECT_EVENTS_QUERY = `SELECT * FROM events`;
-  let query = SELECT_EVENTS_QUERY;
-  if (allConditions.length > 0) {
-    query = query.concat(` WHERE ${allConditions.join(' AND ')}`);
-  }
-  if (paginationAndSorting.length > 0) {
-    query = query.concat(` ${paginationAndSorting.join(' ')}`);
-  }
-
   const { isSuccess, value } = await db
-    .queryAll<EventLogFromDb>(query)
+    .filter<EventLogFromDb>({
+      table: 'events',
+      whereClauses: wheres,
+      sortClauses: sort,
+      limit: limit ? parseInt(limit) : 100,
+      offset: offset ? parseInt(offset) : 0,
+    })
     .then((res) => ({
       isSuccess: true,
       value: JSON.stringify(res.map(parseEventArgs)),
