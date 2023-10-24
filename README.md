@@ -30,9 +30,40 @@ In order to run the indexer you don't have to write any code. Every contract can
    bun run create:targets -a ./abi.json -e "Transfer" "Approval"
    ```
 
-   This will generate a list of targets in a file `targets.json`. **Do not modify this file!**
+   This will generate a list of targets in a file `targets.json`.
 
-3. fill in the environment variables in the docker compose file for the appropriate environment (dev or prod):
+   > If you want to index events from multiple contracts, then you can run the `create:targets` command multiple times with differend params and your events will be appended to the targets file.
+
+   If you don't have Hardhat output ABI, then you can create `targets.json` file manually. It has a following structure:
+
+   ```ts
+   [
+     {
+       abiItem: {
+         anonymous: false,
+         inputs: [
+           {
+             indexed: false,
+             internalType: 'address',
+             name: 'addressInput',
+             type: 'address',
+           },
+           {
+             indexed: false,
+             internalType: 'uint256',
+             name: 'uintInput',
+             type: 'uint256',
+           },
+         ],
+         name: 'MyEventName',
+         type: 'event',
+       },
+       address: '0x3a2Eb2622B4f10de9E78bd2057a0AB7a6F70B95F',
+     },
+   ];
+   ```
+
+3. fill in the environment variables in the docker compose file for the appropriate environment (dev or prod) or in the `.env` file in the root directory of the project if you don;t want to use docker:
 
    For indexer:
 
@@ -65,13 +96,17 @@ In order to run the indexer you don't have to write any code. Every contract can
      GRAPHQL: <string> 'true' | 'false' - enables GraphQL API instead of rest
    ```
 
-4. run docker compose for dev or prod environment:
+4. run docker compose for dev or prod environment or dev script:
 
    ```bash
    docker compose -f docker-compose.[env].yml up
    ```
 
    This will start the indexer and the API server. Dev docker file will autoreload the indexer and the API on every code change. Prod one is optimized for production - you just have to pass the environment variables to the container.
+
+   ```bash
+   bun run dev
+   ```
 
 5. Enjoy indexed data with zero latency and no costs!
 

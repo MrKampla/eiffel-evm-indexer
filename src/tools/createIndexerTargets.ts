@@ -36,9 +36,24 @@ const targetAbis = await abiPaths.reduce(
   Promise.resolve([] as HardhatAbi[]),
 );
 
-const res = targetAbis.flatMap((target) =>
+const newTargets = targetAbis.flatMap((target) =>
   target.abi.flatMap((abi) => ({ abiItem: abi, address: target.address })),
 );
 
-console.log(JSON.stringify(res));
-await fs.writeFile('./targets.json', JSON.stringify(res, null, 2));
+if (await fs.exists('./targets.json')) {
+  const existingTargets = JSON.parse(await fs.readFile('./targets.json', 'utf8'));
+  if (existingTargets.length) {
+    const shouldExtend = confirm(
+      '❓ targets.json already exists, would you like to extend it?',
+    );
+    if (!shouldExtend) {
+      console.log('❌ Aborting');
+      process.exit(1);
+    }
+
+    newTargets.push(...existingTargets);
+  }
+}
+
+await fs.writeFile('./targets.json', JSON.stringify(newTargets, null, 2));
+console.log('✅ Written targets to ./targets.json');
