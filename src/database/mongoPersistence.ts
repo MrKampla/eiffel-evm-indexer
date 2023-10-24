@@ -3,7 +3,7 @@ import { EventLog, PersistenceObject } from '../types';
 import { createUniqueIdForEvent } from '../utils/createUniqueIdForEvent';
 import { logger } from '../utils/logger';
 import { BIGINT_MATH } from '../utils/bigIntMath';
-import { WhereClause, SortClause, FilterOperators, FilterTypes } from './filters';
+import { WhereClause, SortClause, FilterOperators, FilterType } from './filters';
 import { serialize } from '../utils/serializer';
 
 export class MongoDBPersistence implements PersistenceObject {
@@ -55,7 +55,7 @@ export class MongoDBPersistence implements PersistenceObject {
     if (sortClauses?.length) query = query.sort(mongoSort);
     if (limit) query = query.limit(limit);
     if (offset >= 0) query = query.skip(offset);
-    
+
     const results = (await query.toArray()).map((result) => result as T);
     return results;
   }
@@ -73,15 +73,15 @@ export class MongoDBPersistence implements PersistenceObject {
     const collections = await this.db.listCollections().toArray();
 
     if (this.clearDb) {
-      if(collections.some(col => col.name === this.eventsCollectionName))
+      if (collections.some((col) => col.name === this.eventsCollectionName))
         await this.db.dropCollection(this.eventsCollectionName);
-      if(collections.some(col => col.name === this.indexingCollectionName))
+      if (collections.some((col) => col.name === this.indexingCollectionName))
         await this.db.dropCollection(this.indexingCollectionName);
       logger.log(`Dropped collections`);
     }
-    if(!collections.some(col => col.name === this.eventsCollectionName))
+    if (!collections.some((col) => col.name === this.eventsCollectionName))
       await this.db.createCollection(this.eventsCollectionName);
-    if(!collections.some(col => col.name === this.indexingCollectionName))
+    if (!collections.some((col) => col.name === this.indexingCollectionName))
       await this.db.createCollection(this.indexingCollectionName);
     logger.log(`Initialized collections`);
   }
@@ -91,7 +91,7 @@ export class MongoDBPersistence implements PersistenceObject {
     latestBlockNumber?: bigint | undefined,
   ): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
-    if(batch.length === 0) return;
+    if (batch.length === 0) return;
 
     const eventsCollection: Collection = this.db.collection(this.eventsCollectionName);
     const indexingStatusCollection: Collection = this.db.collection(
@@ -152,7 +152,7 @@ export class MongoDBPersistence implements PersistenceObject {
   }
 
   private convertValue(whereClauses: WhereClause): string | number {
-    return whereClauses.type === FilterTypes.NUMBER
+    return whereClauses.type === FilterType.NUMBER
       ? parseFloat(whereClauses.value)
       : whereClauses.value;
   }

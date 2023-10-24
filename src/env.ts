@@ -35,13 +35,13 @@ if (!process.env.START_FROM_BLOCK) {
   throw new Error('START_FROM_BLOCK not set');
 }
 if (![undefined, 'sqlite', 'postgres', 'mongo'].includes(process.env.DB_TYPE)) {
-  throw new Error('DB_TYPE is only allowed to be "sqlite" or "postgres"');
+  throw new Error('DB_TYPE is only allowed to be "sqlite", "postgres" or "mongo"');
 }
 if (process.env.DB_TYPE === 'postgres' && !process.env.DB_URL) {
   throw new Error('postgres DB_URL not set');
 }
 
-if(process.env.DB_TYPE === 'mongo' && !process.env.DB_NAME?.length) {
+if (process.env.DB_TYPE === 'mongo' && !process.env.DB_NAME?.length) {
   throw new Error('mogno DB_NAME is not set');
 }
 

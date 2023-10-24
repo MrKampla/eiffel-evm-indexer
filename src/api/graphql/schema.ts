@@ -2,7 +2,7 @@ import { YogaInitialContext, createSchema } from 'graphql-yoga';
 import { EventLogFromDb, IndexingStatus, PersistenceObject } from '../../types';
 import {
   FilterOperators,
-  FilterTypes,
+  FilterType,
   SortClause,
   WhereClause,
 } from '../../database/filters';
@@ -85,15 +85,15 @@ export const schema = createSchema({
 const handleEventsRequest = async (
   filters: { where: WhereClause[]; sort: SortClause[]; limit: number; offset: number },
   db: PersistenceObject,
-  chainId: number,
+  _chainId: number,
 ) => {
   const events = await db.filter<EventLogFromDb>({
     table: 'events',
     whereClauses: filters?.where?.map((w) =>
-      !w.type ? { ...w, type: FilterTypes.TEXT } : w,
+      !w.type ? { ...w, type: FilterType.TEXT } : w,
     ),
     sortClauses: filters?.sort?.map((s) =>
-      !s.type ? { ...s, type: FilterTypes.TEXT } : s,
+      !s.type ? { ...s, type: FilterType.TEXT } : s,
     ),
     limit: filters?.limit,
     offset: filters?.offset,
@@ -111,7 +111,7 @@ const handleIndexingStatusRequest = (
       {
         field: 'chainId',
         operator: FilterOperators.EQ,
-        type: FilterTypes.TEXT,
+        type: FilterType.TEXT,
         value: chainId.toString(),
       },
     ],

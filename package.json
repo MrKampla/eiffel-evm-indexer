@@ -2,13 +2,14 @@
   "name": "eiffel-evm-indexer",
   "module": "src/index.ts",
   "type": "module",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "scripts": {
     "dev": "bunx concurrently \"bun --watch ./src/index.ts\" \"bun --watch ./src/api/index.ts\"",
     "start:indexer": "bun ./src/index.ts",
     "start:api": "bun ./src/api/index.ts",
     "query": "bun ./src/tools/queryDb.ts",
-    "create:targets": "bun ./src/tools/createIndexerTargets.ts"
+    "create:targets": "bun ./src/tools/createIndexerTargets.ts",
+    "format": "prettier --write \"src/**/*.ts\""
   },
   "devDependencies": {
     "bun-types": "latest",

@@ -1,4 +1,4 @@
-import { FilterTypes, SortClause } from '../../database/filters';
+import { FilterType, SortClause } from '../../database/filters';
 
 export const parseSortClause = (
   t: string,
@@ -8,10 +8,10 @@ export const parseSortClause = (
   let [field, typeEnum, directionEnum] =
     tokens.length === 3 ? tokens : [tokens[0], undefined, tokens[1]];
   if (!typeEnum) {
-    typeEnum = FilterTypes.TEXT;
+    typeEnum = FilterType.TEXT;
   }
   const direction = directionEnum?.toUpperCase() as 'ASC' | 'DESC';
-  const type = typeEnum?.toUpperCase() as FilterTypes;
+  const type = typeEnum?.toUpperCase() as FilterType;
   if (!direction || !type || !allowedKeyPattern.test(field)) {
     throw new Error('Invalid sort clause');
   }

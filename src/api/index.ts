@@ -14,36 +14,37 @@ const data: PersistenceObject = getDb({
   dbUrl: env.DB_URL,
   chainId: env.CHAIN_ID,
   ssl: env.DB_SSL,
-  dbName: env.DB_NAME
+  dbName: env.DB_NAME,
 });
-
 
 const yoga = createGraphqlServer(data);
 
-const server = env.GPAPHQL ? Bun.serve({fetch: yoga.fetch.bind(yoga), port: env.API_PORT}) : Bun.serve({
-  port: env.API_PORT,
-  async fetch(request) {
-    // Handle CORS preflight requests
-    if (request.method === 'OPTIONS') {
-      const res = new ResponseWithCors('Departed');
-      return res;
-    }
-    return router(request, data)
-      .when('/api/events', handleEventsRequest)
-      .when('/api/indexing_status', handleIndexingStatusRequest)
-      .when(
-        '/',
-        async () =>
-          new ResponseWithCors(
-            JSON.stringify({
-              message: 'Welcome to EIFFEL API!',
-              version: packageJson.version,
-            }),
-          ),
-      )
-      .route(request.url);
-  },
-});
+const server = env.GPAPHQL
+  ? Bun.serve({ fetch: yoga.fetch.bind(yoga), port: env.API_PORT })
+  : Bun.serve({
+      port: env.API_PORT,
+      async fetch(request) {
+        // Handle CORS preflight requests
+        if (request.method === 'OPTIONS') {
+          const res = new ResponseWithCors('Departed');
+          return res;
+        }
+        return router(request, data)
+          .when('/api/events', handleEventsRequest)
+          .when('/api/indexing_status', handleIndexingStatusRequest)
+          .when(
+            '/',
+            async () =>
+              new ResponseWithCors(
+                JSON.stringify({
+                  message: 'Welcome to EIFFEL API!',
+                  version: packageJson.version,
+                }),
+              ),
+          )
+          .route(request.url);
+      },
+    });
 
 logger.log(`Listening on ${server.hostname}:${server.port}`);
 data.init();

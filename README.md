@@ -18,7 +18,7 @@ In order to run the indexer you don't have to write any code. Every contract can
    bun install
    ```
 
-2. run the ABI parser tool:
+2. run the ABI parser tool. **WARNING**: this tool only accepts Hardhat output ABI from `deployments` directory
 
    ```bash
    bun run create:targets -a <path to ABI file> -e <event names to index separated by space>
@@ -86,6 +86,7 @@ interface EventLog {
   eventName: string;
   args: Record<string, any>; // event arguments in a JSON.stringify text
   chainId: number;
+  transactionHash: string;
 }
 
 interface IndexingStatus {
@@ -102,40 +103,44 @@ You can query them with the following API endpoints:
 Requests to the `/api/events` endpoint are configurable with following query parameters:
 
 - filters (EQ, LT, LTE, GT, GTE, NEQ)
-  - `/api/events?where=address:EQ:0x2791bca1f2de4661ed88a30c99a7a9449aa84174&where=blockNumber:GT:INT:48358310`
-  OR
-  - `/api/events?where=address:EQ:0x2791bca1f2de4661ed88a30c99a7a9449aa84174,blockNumber:GT:INT:48358310`
-  OR 
-  - `/api/events?where=args_from:NEQ:0x25aB3Efd52e6470681CE037cD546Dc60726948D3,args_value:EQ:1053362095,blockNumber:GT:INT:48358310`
+  - `/api/events?where=address:EQ:0x2791bca1f2de4661ed88a30c99a7a9449aa84174&where=blockNumber:GT:NUM:48358310`
+    OR
+  - `/api/events?where=address:EQ:0x2791bca1f2de4661ed88a30c99a7a9449aa84174,blockNumber:GT:NUM:48358310`
+    OR
+  - `/api/events?where=args_from:NEQ:0x25aB3Efd52e6470681CE037cD546Dc60726948D3,args_value:EQ:1053362095,blockNumber:GT:NUM:48358310`
 - pagination (limit, offset)
   - `/api/events?limit=10&offset=10`
 - sorting (numeric sorting and text sorting) over top level fields or event arguments (asc, desc)
   - `/api/events?sort=address:ASC`
-  - `/api/events?sort=blockNumber:INT:ASC`
+  - `/api/events?sort=blockNumber:NUM:ASC`
   - `/api/events?sort=args_from:DESC`
-  - `/api/events?sort=args_value:INT:DESC`
+  - `/api/events?sort=args_value:NUM:DESC`
 
-If you are using GraphQL endpoint, then you should send GraphQL queries to `POST /api/graphql`.
+There are two types of comparison: text and numeric. By default all values are compared by text. If you want to compare by number, then you have to specify the type of the field in the query parameter. For example, if you want to sort by block number, then you have to specify that it is a numeric field: `sort=blockNumber:NUM:ASC`. This also works for `where` filters e.g. `where=blockNumber:GT:NUM:48358310`.
+
+If you have multiple `where` clauses, then you can separate them by a comma, for example:
+`/api/events?where=address:EQ:0x2791bca1f2de4661ed88a30c99a7a9449aa84174,blockNumber:GT:NUM:48358310`
+
+### GraphQL (NOT PRODUCTION READY)
+
+If you want to use GraphQL endpoint, then you should send GraphQL queries to `POST /api/graphql`.
+
+> **WARNING** There is currently a limitation to the GraphQL api: you cannot query by event arguments. This will be fixed in the future by providing an option to extend the GraphQL schema with custom types defined by user.
 
 Example for events:
+
 ```graphql
 query {
   events(
     where: [
-        {
-            field: "address",
-            operator: EQ,
-            value: "0x2791bca1f2de4661ed88a30c99a7a9449aa84174"
-        }
-    ],
-    sort: [
-        {
-            field: "address",
-            direction: DESC,
-            type: TEXT
-        }
-    ],
-    limit: 10,
+      {
+        field: "address"
+        operator: EQ
+        value: "0x2791bca1f2de4661ed88a30c99a7a9449aa84174"
+      }
+    ]
+    sort: [{ field: "address", direction: DESC, type: TEXT }]
+    limit: 10
     offset: 20
   ) {
     id
@@ -152,9 +157,9 @@ For indexing status:
 
 ```graphql
 query {
-    indexing_status {
-        blockNumber
-        chainId
+  indexing_status {
+    blockNumber
+    chainId
   }
 }
 ```

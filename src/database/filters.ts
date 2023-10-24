@@ -1,14 +1,14 @@
 export interface WhereClause {
   field: string;
   operator: FilterOperators;
-  type: FilterTypes;
+  type: FilterType;
   value: string;
 }
 
 export interface SortClause {
   field: string;
   direction: 'ASC' | 'DESC';
-  type: FilterTypes;
+  type: FilterType;
 }
 
 export enum FilterOperators {
@@ -20,7 +20,7 @@ export enum FilterOperators {
   NEQ = 'NEQ',
 }
 
-export enum FilterTypes {
+export enum FilterType {
   TEXT = 'TEXT',
-  NUMBER = 'INT',
+  NUMBER = 'NUM',
 }

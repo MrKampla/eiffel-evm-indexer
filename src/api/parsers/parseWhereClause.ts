@@ -1,14 +1,17 @@
-import { FilterOperators, FilterTypes, WhereClause } from '../../database/filters';
+import { FilterOperators, FilterType, WhereClause } from '../../database/filters';
 
-export const parseWhereClause = (t: string, allowedKeyPattern = /^[a-zA-Z0-9_]*$/): WhereClause => {
+export const parseWhereClause = (
+  t: string,
+  allowedKeyPattern = /^[a-zA-Z0-9_]*$/,
+): WhereClause => {
   const tokens = t.trim().split(':');
   let [field, operatorEnum, typeEnum, value] =
     tokens.length === 4 ? tokens : [tokens[0], tokens[1], undefined, tokens[2]];
   if (!typeEnum) {
-    typeEnum = FilterTypes.TEXT;
+    typeEnum = FilterType.TEXT;
   }
   const operator = operatorEnum?.toUpperCase() as FilterOperators;
-  const type = typeEnum?.toUpperCase() as FilterTypes;
+  const type = typeEnum?.toUpperCase() as FilterType;
   if (
     !operator ||
     !type ||

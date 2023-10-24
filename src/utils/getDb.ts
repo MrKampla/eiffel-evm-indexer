@@ -9,7 +9,7 @@ export const getDb = ({
   dbUrl,
   dbName,
   clearDb,
-  ssl
+  ssl,
 }: {
   dbType: string;
   chainId: number;
@@ -18,7 +18,7 @@ export const getDb = ({
   ssl?: boolean;
   dbName?: string;
 }): PersistenceObject => {
-  switch(dbType) {
+  switch (dbType) {
     case 'postgres':
       return new PostgresPersistence(chainId, dbUrl, clearDb, ssl);
     case 'sqlite':

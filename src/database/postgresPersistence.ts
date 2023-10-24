@@ -45,7 +45,8 @@ export class PostgresPersistence extends SqlPersistenceBase {
         "blockNumber" INTEGER
       );`;
     });
-    logger.log(`Initialized tables ${this.eventsCollectionName} and ${this.indexingCollectionName}`,
+    logger.log(
+      `Initialized tables ${this.eventsCollectionName} and ${this.indexingCollectionName}`,
     );
   }
 

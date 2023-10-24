@@ -5,7 +5,6 @@ import { env } from '../envApi';
 
 export * from './schema';
 
-
 export const createGraphqlServer = (db: PersistenceObject): any =>
   createYoga({
     schema,

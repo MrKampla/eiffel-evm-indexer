@@ -34,7 +34,8 @@ export class SqlitePersistence extends SqlPersistenceBase {
         "blockNumber" INTEGER,
         "eventName" TEXT,
         args TEXT,
-        "chainId" INTEGER
+        "chainId" INTEGER,
+        "transactionHash" TEXT
         );`,
       )
       .run();
@@ -63,12 +64,17 @@ export class SqlitePersistence extends SqlPersistenceBase {
     })();
   }
 
-  public async saveBatch(batch: EventLog[], latestBlockNumber?: bigint) : Promise<void> {
+  public async saveBatch(batch: EventLog[], latestBlockNumber?: bigint): Promise<void> {
     const latestIndexedBlock =
       latestBlockNumber ?? BIGINT_MATH.max(...batch.map((event) => event.blockNumber));
 
     const insertEventLog = this.db.prepare(
-      'INSERT INTO events (id, address, blockNumber, eventName, chainId, args) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET blockNumber=excluded.blockNumber, transactionHash = excluded.transactionHash',
+      `INSERT INTO events 
+        (id, address, blockNumber, eventName, chainId, args, transactionHash)
+        VALUES 
+        (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) 
+        DO UPDATE SET blockNumber=excluded.blockNumber, transactionHash = excluded.transactionHash`,
     );
     const insertIndexingStatus = this.db.prepare(
       'INSERT INTO indexing_status (chainId, blockNumber) VALUES (?, ?) ON CONFLICT(chainId) DO UPDATE SET blockNumber = excluded.blockNumber',
@@ -82,6 +88,7 @@ export class SqlitePersistence extends SqlPersistenceBase {
           event.eventName,
           this.chainId.toString(),
           serialize(event.args),
+          event.transactionHash,
         );
       });
       insertIndexingStatus.run(this.chainId.toString(), latestIndexedBlock.toString());
@@ -90,7 +97,9 @@ export class SqlitePersistence extends SqlPersistenceBase {
     writeLogsBatch(batch);
   }
 
-  public async getLatestIndexedBlockForChain(chainId: number): Promise<number | undefined> {
+  public async getLatestIndexedBlockForChain(
+    chainId: number,
+  ): Promise<number | undefined> {
     return (
       this.db
         .query(`SELECT blockNumber FROM indexing_status WHERE chainId = ${chainId}`)
@@ -98,7 +107,10 @@ export class SqlitePersistence extends SqlPersistenceBase {
     )?.blockNumber;
   }
 
-  protected getJsonObjectPropertySqlFragment(column: string, propertyName: string): string {
+  protected getJsonObjectPropertySqlFragment(
+    column: string,
+    propertyName: string,
+  ): string {
     return `JSON_EXTRACT(${column}, '$.${propertyName}') `;
   }
 

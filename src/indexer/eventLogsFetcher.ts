@@ -33,16 +33,15 @@ export class EventLogsFetcher implements EventsFetcher {
 
       logger.log(`Fetching from ${currentBlock} to ${toBlock}`);
 
-      yield new Promise<BlockNumberAndLogBatchTuple>(async (resolve) => {
-        const logs = (await this.publicClient.getLogs({
-          address: targets.map((target) => target.address),
-          events: targets.map((target) => target.abiItem),
-          fromBlock: currentBlock,
-          toBlock,
-        })) as EventLog[];
-        resolve([toBlock, logs]);
+      const logs = await this.publicClient.getLogs({
+        address: targets.map((target) => target.address),
+        events: targets.map((target) => target.abiItem),
+        fromBlock: currentBlock,
+        toBlock,
       });
-      currentBlock = toBlock + 1n;
+
+      yield [toBlock, logs] as BlockNumberAndLogBatchTuple;
+      currentBlock = toBlock;
     }
   }
 }

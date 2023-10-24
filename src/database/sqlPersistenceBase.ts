@@ -1,12 +1,12 @@
 import { knex } from 'knex';
 import { EventLog, PersistenceObject } from '../types';
-import { FilterOperators, FilterTypes, SortClause, WhereClause } from './filters';
+import { FilterOperators, FilterType, SortClause, WhereClause } from './filters';
 
 export abstract class SqlPersistenceBase implements PersistenceObject {
   protected readonly _knexClient: knex.Knex;
 
   constructor(client: 'pg' | 'sqlite3') {
-    this._knexClient = knex({ client });
+    this._knexClient = knex({ client, useNullAsDefault: true });
   }
 
   abstract init(): Promise<void>;
@@ -43,23 +43,26 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
       clause.field.includes('args')
         ? query.where(
             this._knexClient.raw(
-              `${this.getJsonObjectPropertySqlFragment(
-                'args',
-                clause.field.slice(5),
+              `${this.castAsNumericWhenRequested(
+                this.getJsonObjectPropertySqlFragment('args', clause.field.slice(5)),
+                clause.type,
               )} ${this.getSqlOperator(clause.operator)} ?`,
-              [this.convert(clause.value, clause.type)],
+              [this.convertValue(clause.value, clause.type)],
             ),
           )
         : query.where(
             this._knexClient.raw(
-              `${table}."${clause.field}" ${this.getSqlOperator(clause.operator)} ?`,
-              [this.convert(clause.value, clause.type)],
+              `${this.castAsNumericWhenRequested(
+                `${table}."${clause.field}"`,
+                clause.type,
+              )} ${this.getSqlOperator(clause.operator)} ?`,
+              [this.convertValue(clause.value, clause.type)],
             ),
           );
     }
 
     for (const clause of sortClauses) {
-      if (clause.type == FilterTypes.TEXT) {
+      if (clause.type == FilterType.TEXT) {
         clause.field.includes('args')
           ? query.orderByRaw(
               `${this.getJsonObjectPropertySqlFragment('args', clause.field.slice(5))} ${
@@ -70,13 +73,16 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
       } else {
         clause.field.includes('args')
           ? query.orderByRaw(
-              `CAST(${this.getJsonObjectPropertySqlFragment(
-                'args',
-                clause.field.slice(5),
-              )} AS numeric) ${clause.direction}`,
+              `${this.castAsNumericWhenRequested(
+                this.getJsonObjectPropertySqlFragment('args', clause.field.slice(5)),
+                clause.type,
+              )}  ${clause.direction}`,
             )
           : query.orderByRaw(
-              `CAST(${table}."${clause.field}" AS numeric) ${clause.direction}`,
+              `${this.castAsNumericWhenRequested(
+                `${table}."${clause.field}"`,
+                clause.type,
+              )} ${clause.direction}`,
             );
       }
     }
@@ -111,12 +117,16 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
     }
   }
 
-  protected convert(value: string, type: FilterTypes): string | number {
+  protected convertValue(value: string, type: FilterType): string | number {
     switch (type) {
-      case FilterTypes.TEXT:
+      case FilterType.TEXT:
         return value;
-      case FilterTypes.NUMBER:
+      case FilterType.NUMBER:
         return parseInt(value);
     }
+  }
+
+  protected castAsNumericWhenRequested(column: string, clauseType: FilterType): string {
+    return clauseType === FilterType.NUMBER ? `CAST(${column} AS numeric)` : column;
   }
 }

@@ -1,7 +1,7 @@
 import { env } from '../envApi';
 import { IndexingStatus, PersistenceObject } from '../../types';
 import { ResponseWithCors } from '../responseWithCors';
-import { FilterOperators, FilterTypes } from '../../database/filters';
+import { FilterOperators, FilterType } from '../../database/filters';
 
 export const handleIndexingStatusRequest = async (
   _request: Request,
@@ -13,7 +13,7 @@ export const handleIndexingStatusRequest = async (
       {
         field: 'chainId',
         operator: FilterOperators.EQ,
-        type: FilterTypes.TEXT,
+        type: FilterType.TEXT,
         value: env.CHAIN_ID.toString(),
       },
     ],

@@ -14,7 +14,7 @@ if (process.env.DB_TYPE === 'postgres' && !process.env.DB_URL) {
   throw new Error('postgres DB_URL not set');
 }
 
-if(process.env.DB_TYPE === 'mongo' && !process.env.DB_NAME?.length) {
+if (process.env.DB_TYPE === 'mongo' && !process.env.DB_NAME?.length) {
   throw new Error('mogno DB_NAME is not set');
 }
 
@@ -25,5 +25,5 @@ export const env = {
   DB_URL: process.env.DB_URL || 'events.db',
   DB_SSL: process.env.DB_SSL === 'true',
   GPAPHQL: process.env.GPAPHQL === 'true',
-  DB_NAME: process.env.DB_NAME
+  DB_NAME: process.env.DB_NAME,
 } as const;
