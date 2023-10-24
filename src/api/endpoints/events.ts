@@ -5,7 +5,7 @@ import { SortClause, WhereClause } from '../../database/filters';
 import { parseWhereClause } from '../parsers/parseWhereClause';
 import { parseSortClause } from '../parsers/parseSortClause';
 
-export const handleEventsRequest = async (request: Request, db: PersistenceObject) => {
+export default async (request: Request, db: PersistenceObject) => {
   const { searchParams } = new URL(request.url);
 
   let sort: SortClause[] = [];

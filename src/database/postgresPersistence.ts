@@ -1,4 +1,3 @@
-import postgres, { Sql } from 'postgres';
 import { EventLog } from '../types';
 import { BIGINT_MATH } from '../utils/bigIntMath';
 import { createUniqueIdForEvent } from '../utils/createUniqueIdForEvent';
@@ -7,7 +6,6 @@ import { logger } from '../utils/logger';
 import { SqlPersistenceBase } from './sqlPersistenceBase';
 
 export class PostgresPersistence extends SqlPersistenceBase {
-  private sql: Sql;
   private readonly indexingCollectionName = 'indexing_status';
   private readonly eventsCollectionName = 'events';
 
@@ -18,11 +16,10 @@ export class PostgresPersistence extends SqlPersistenceBase {
     ssl: boolean = true,
   ) {
     super('pg');
-    this.sql = postgres(dbUrl, { ssl });
   }
 
   public disconnect(): Promise<void> {
-    return this.sql.end();
+    return this._knexClient.destroy();
   }
 
   public async init(): Promise<void> {
@@ -30,8 +27,8 @@ export class PostgresPersistence extends SqlPersistenceBase {
     if (this.clearDb) {
       await this.dropTables();
     }
-    await this.sql.begin(async (tx) => {
-      await tx`CREATE TABLE IF NOT EXISTS events (
+    this._knexClient.transaction(async (trx) => {
+      await trx.raw(`CREATE TABLE IF NOT EXISTS events (
         id TEXT PRIMARY KEY,
         address TEXT,
         "blockNumber" INTEGER,
@@ -39,11 +36,11 @@ export class PostgresPersistence extends SqlPersistenceBase {
         args TEXT,
         "chainId" INTEGER,
         "transactionHash" TEXT
-      );`;
-      await tx`CREATE TABLE IF NOT EXISTS indexing_status (
+      );`);
+      await trx.raw(`CREATE TABLE IF NOT EXISTS indexing_status (
         "chainId" INTEGER PRIMARY KEY,
         "blockNumber" INTEGER
-      );`;
+      );`);
     });
     logger.log(
       `Initialized tables ${this.eventsCollectionName} and ${this.indexingCollectionName}`,
@@ -56,32 +53,28 @@ export class PostgresPersistence extends SqlPersistenceBase {
   ): Promise<void> {
     const latestIndexedBlock =
       latestBlockNumber ?? BIGINT_MATH.max(...batch.map((event) => event.blockNumber));
-
-    await this.sql.begin(async (tx) => {
+    await this._knexClient.transaction(async (trx) => {
       await Promise.all(
         batch.map(async (event) => {
-          await tx`INSERT INTO events ${this.sql(
-            {
-              ...event,
-              blockNumber: event.blockNumber.toString(),
-              id: createUniqueIdForEvent(event),
-              args: serialize(event.args),
-              chainId: this.chainId.toString(),
-            },
-            'id',
-            'address',
-            'blockNumber',
-            'eventName',
-            'args',
-            'chainId',
-            'transactionHash',
-          )} ON CONFLICT(id) DO UPDATE SET "blockNumber"=excluded."blockNumber", "transactionHash" = excluded."transactionHash"`;
+          await trx.raw(
+            `INSERT INTO events (id, address, "blockNumber", "eventName", args, "chainId", "transactionHash") VALUES (
+              '${createUniqueIdForEvent(event)}',
+              '${event.address}',
+              '${event.blockNumber.toString()}',
+              '${event.eventName}',
+              '${serialize(event.args)}',
+              '${this.chainId.toString()}',
+              '${event.transactionHash}'
+            ) ON CONFLICT(id) DO UPDATE SET 
+            "blockNumber"=excluded."blockNumber", "transactionHash" = excluded."transactionHash"`,
+          );
         }),
       );
-      await tx`INSERT INTO indexing_status ${this.sql({
-        chainId: this.chainId.toString(),
-        blockNumber: latestIndexedBlock?.toString(),
-      })} ON CONFLICT("chainId") DO UPDATE SET "blockNumber"=excluded."blockNumber"`;
+      await trx.raw(
+        `INSERT INTO indexing_status ("chainId", "blockNumber") 
+        VALUES ('${this.chainId.toString()}', '${latestIndexedBlock?.toString()}') 
+        ON CONFLICT("chainId") DO UPDATE SET "blockNumber"=excluded."blockNumber"`,
+      );
     });
   }
 
@@ -89,9 +82,10 @@ export class PostgresPersistence extends SqlPersistenceBase {
     chainId: number,
   ): Promise<number | undefined> {
     return (
-      await this
-        .sql`SELECT "blockNumber" FROM indexing_status WHERE "chainId" = ${chainId}`
-    )[0]?.blockNumber;
+      await this._knexClient.raw(
+        `SELECT "blockNumber" FROM indexing_status WHERE "chainId" = ${chainId}`,
+      )
+    ).rows[0]?.blockNumber;
   }
 
   protected getJsonObjectPropertySqlFragment(
@@ -103,13 +97,13 @@ export class PostgresPersistence extends SqlPersistenceBase {
 
   protected async queryAll<T>(query: string): Promise<T[]> {
     logger.log(query);
-    const items = (await this.sql.unsafe(query)) as unknown as T[];
+    const items = (await this._knexClient.raw(query)) as unknown as T[];
     return items;
   }
 
   protected async dropTables(): Promise<void> {
-    await this.sql`DROP TABLE IF EXISTS events`;
-    await this.sql`DROP TABLE IF EXISTS indexing_status`;
+    await this._knexClient.raw(`DROP TABLE IF EXISTS events`);
+    await this._knexClient.raw(`DROP TABLE IF EXISTS indexing_status`);
     logger.log(`Dropped tables`);
   }
 }

@@ -3,10 +3,7 @@ import { IndexingStatus, PersistenceObject } from '../../types';
 import { ResponseWithCors } from '../responseWithCors';
 import { FilterOperators, FilterType } from '../../database/filters';
 
-export const handleIndexingStatusRequest = async (
-  _request: Request,
-  db: PersistenceObject,
-) => {
+export default async (_request: Request, db: PersistenceObject) => {
   const item = await db.filter<IndexingStatus>({
     table: 'indexing_status',
     whereClauses: [

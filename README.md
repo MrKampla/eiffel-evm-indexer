@@ -2,9 +2,9 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This is a simple Typescript indexer for any smart contract event logs on any EVM chain based soley on the contract ABI (no custom code). It saves event data into either postgres database or SQLite (in-memory or file). Indexer comes with a REST API to query indexed data.
+This is a simple Typescript indexer for any smart contract event logs on any EVM chain based soley on the contract ABI (no custom code needed to run but is extendable if you want). It saves event data into either postgres, MongoDB or SQLite (in-memory or file). Indexer comes with a REST API to query indexed data.
 
-You just have to provide an RPC url (public works too!), chain ID and ABI of a target contract. No need to write any code or use any SDKs, archives or other bullshit.
+You just have to provide an RPC url (public works too!), chain ID and ABI of a target contract with address. No need to write any code or use any SDKs, archives or other bullshit.
 
 ## Deployment
 
@@ -156,7 +156,71 @@ There are two types of comparison: text and numeric. By default all values are c
 If you have multiple `where` clauses, then you can separate them by a comma, for example:
 `/api/events?where=address:EQ:0x2791bca1f2de4661ed88a30c99a7a9449aa84174,blockNumber:GT:NUM:48358310`
 
-### GraphQL (NOT PRODUCTION READY)
+## Custom API endpoints
+
+You can create your own API endpoints by adding request handlers to the `src/api/endpoints` directory.
+Request handler file has to `export default` a function with the following signature:
+
+```ts
+  async (request: Request, db: PersistenceObject<>): ResponseWithCors;
+```
+
+example `src/api/endpoints/custom-endpoint.ts` in postgres:
+
+```ts
+import { Knex } from 'knex';
+import { PersistenceObject } from '../../types';
+import { ResponseWithCors } from '../responseWithCors';
+
+// you have access to the db and the request object
+// WARNING: PersistanceObject is a generic type and it differs depending on what db you use.
+// For example, for SQLite it's a "bun:sqlite" Database instance, for postgres it's Knex
+// and for Mongo it's MongoClient
+export default async (request: Request, db: PersistenceObject<Knex>) => {
+  // you can use the request object to get query parameters, headers, etc.
+  const { searchParams } = new URL(request.url);
+  const amount = +(searchParams.get('amount') ?? 0);
+
+  // you can use the db to query the database
+  const baseDb = db.getUnderlyingDataSource();
+  const result = (await knex.raw(`SELECT 1 + ${amount} AS result`)).rows[0]
+    .result as number;
+
+  return new ResponseWithCors(
+    JSON.stringify({
+      result,
+    }),
+  );
+};
+```
+
+Now, if you use docker, please restart the container. After that you should be able to access your endpoint at `/api/custom-endpoint`.
+
+The same endpoint in SQLite (for reference):
+
+```ts
+import { PersistenceObject } from '../../types';
+import { ResponseWithCors } from '../responseWithCors';
+import Database from 'bun:sqlite';
+
+export default async (request: Request, db: PersistenceObject<Database>) => {
+  const { searchParams } = new URL(request.url);
+
+  const amount = +(searchParams.get('amount') ?? 0);
+
+  const dbObj = db.getUnderlyingDataSource();
+  const result = (<any>dbObj.query(`SELECT 1 + ${amount} AS result`).get()).result;
+  return new ResponseWithCors(
+    JSON.stringify({
+      result,
+    }),
+  );
+};
+```
+
+> NOTE: File system based routing does not work with nested directories yet. It will be fixed in the future.
+
+## GraphQL (NOT PRODUCTION READY)
 
 If you want to use GraphQL endpoint, then you should send GraphQL queries to `POST /api/graphql`.
 

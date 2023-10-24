@@ -22,6 +22,10 @@ export class MongoDBPersistence implements PersistenceObject {
     this.client = new MongoClient(dbUrl);
   }
 
+  getUnderlyingDataSource(): MongoClient {
+    return this.client;
+  }
+
   public async filter<T extends {}>({
     table,
     whereClauses = [],

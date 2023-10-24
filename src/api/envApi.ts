@@ -8,7 +8,7 @@ if (isNaN(+process.env.CHAIN_ID)) {
 }
 
 if (![undefined, 'sqlite', 'postgres', 'mongo'].includes(process.env.DB_TYPE)) {
-  throw new Error('DB_TYPE is only allowed to be "sqlite" or "postgres"');
+  throw new Error('DB_TYPE is only allowed to be "sqlite", "postgres" or "mongo"');
 }
 if (process.env.DB_TYPE === 'postgres' && !process.env.DB_URL) {
   throw new Error('postgres DB_URL not set');

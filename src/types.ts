@@ -3,7 +3,7 @@ import { SortClause, WhereClause } from './database/filters';
 
 export type Hash = `0x${string}`;
 
-export interface PersistenceObject {
+export interface PersistenceObject<UnderlyingDataSource = unknown> {
   init(): Promise<void>;
   saveBatch(batch: EventLog[], blockNumber?: bigint): Promise<void>;
   getLatestIndexedBlockForChain(chainId: number): Promise<number | undefined>;
@@ -21,6 +21,7 @@ export interface PersistenceObject {
     limit?: number;
     offset?: number;
   }): Promise<T[]>;
+  getUnderlyingDataSource(): UnderlyingDataSource;
 }
 
 export interface IndexerProps {

@@ -1,12 +1,29 @@
 import { knex } from 'knex';
 import { EventLog, PersistenceObject } from '../types';
 import { FilterOperators, FilterType, SortClause, WhereClause } from './filters';
+import { env } from '../env';
 
 export abstract class SqlPersistenceBase implements PersistenceObject {
   protected readonly _knexClient: knex.Knex;
 
   constructor(client: 'pg' | 'sqlite3') {
-    this._knexClient = knex({ client, useNullAsDefault: true });
+    if ('sqlite3' === client) {
+      // Knex with SQLite3 does not work in Bun due to missing bindings
+      this._knexClient = undefined as any;
+      return;
+    }
+    this._knexClient = knex({
+      client,
+      useNullAsDefault: true,
+      connection: {
+        connectionString: env.DB_URL,
+        ssl: env.DB_SSL,
+      },
+    });
+  }
+
+  public getUnderlyingDataSource(): unknown {
+    return this._knexClient;
   }
 
   abstract init(): Promise<void>;

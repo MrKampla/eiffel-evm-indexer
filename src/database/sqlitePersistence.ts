@@ -16,6 +16,9 @@ export class SqlitePersistence extends SqlPersistenceBase {
     super('sqlite3');
     this.db = new Database(dbUrl, { create: true });
   }
+  public getUnderlyingDataSource(): Database {
+    return this.db;
+  }
 
   public async disconnect(): Promise<void> {
     this.db.close();
