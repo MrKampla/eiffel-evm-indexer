@@ -72,9 +72,10 @@ export interface GetLogsParams {
   toBlock: bigint;
 }
 
-export interface BlockchainClient {
+export interface BlockchainClient<T = unknown> {
   getLatestBlockNumber(): Promise<bigint>;
   getLogs(params: GetLogsParams): Promise<EventLog[]>;
+  getClient(): T;
 }
 
 export interface IndexingStatus {

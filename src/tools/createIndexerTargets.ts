@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import fs from 'fs/promises';
+import fs from 'node:fs/promises';
 import { program } from 'commander';
 
 program

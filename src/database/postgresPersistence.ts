@@ -15,7 +15,7 @@ export class PostgresPersistence extends SqlPersistenceBase {
     private clearDb: boolean = false,
     ssl: boolean = true,
   ) {
-    super('pg');
+    super('pg', dbUrl, ssl);
   }
 
   public disconnect(): Promise<void> {
@@ -95,10 +95,16 @@ export class PostgresPersistence extends SqlPersistenceBase {
     return `CAST(${column} AS json)->>'${propertyName}' `;
   }
 
-  protected async queryAll<T>(query: string): Promise<T[]> {
+  public async queryAll<T>(query: string): Promise<T[]> {
     logger.log(query);
-    const items = (await this._knexClient.raw(query)) as unknown as T[];
+    const items = (await this._knexClient.raw(query)).rows as T[];
     return items;
+  }
+
+  public async queryOne<T>(query: string): Promise<T> {
+    logger.log(query);
+    const item = (await this._knexClient.raw(query)).rows[0] as T;
+    return item;
   }
 
   protected async dropTables(): Promise<void> {

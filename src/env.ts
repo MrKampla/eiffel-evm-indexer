@@ -1,7 +1,7 @@
 import { IndexerTarget } from './types';
 import { z } from 'zod';
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 
 if (!process.env.CHAIN_ID) {
   throw new Error('CHAIN_ID not set');

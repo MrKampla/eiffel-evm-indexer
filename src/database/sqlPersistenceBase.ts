@@ -1,28 +1,38 @@
-import { knex } from 'knex';
+import { Knex, knex } from 'knex';
 import { EventLog, PersistenceObject } from '../types';
 import { FilterOperators, FilterType, SortClause, WhereClause } from './filters';
-import { env } from '../env';
 
 export abstract class SqlPersistenceBase implements PersistenceObject {
   protected readonly _knexClient: knex.Knex;
 
-  constructor(client: 'pg' | 'sqlite3') {
+  constructor(client: 'pg' | 'sqlite3', dbUrl: string, dbSsl: boolean) {
     if ('sqlite3' === client) {
       // Knex with SQLite3 does not work in Bun due to missing bindings
-      this._knexClient = undefined as any;
+      // https://github.com/oven-sh/bun/issues/4959
+      // You can use it to build queries but not to execute them
+      this._knexClient = knex({
+        client: 'better-sqlite3',
+        useNullAsDefault: true,
+        connection: {
+          filename: dbUrl,
+        },
+        log: {
+          warn() {},
+        },
+      });
       return;
     }
     this._knexClient = knex({
       client,
       useNullAsDefault: true,
       connection: {
-        connectionString: env.DB_URL,
-        ssl: env.DB_SSL,
+        connectionString: dbUrl,
+        ssl: dbSsl,
       },
     });
   }
 
-  public getUnderlyingDataSource(): unknown {
+  public getUnderlyingDataSource(): Knex {
     return this._knexClient;
   }
 
@@ -37,7 +47,9 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
     propertyName: string,
   ): string;
 
-  protected abstract queryAll<T>(query: string): Promise<T[]>;
+  abstract queryAll<T>(query: string): Promise<T[]>;
+
+  abstract queryOne<T>(query: string): Promise<T>;
 
   abstract disconnect(): Promise<void>;
 
@@ -57,50 +69,32 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
     let query = this._knexClient.select('*').from<T>(table);
 
     for (const clause of whereClauses) {
-      clause.field.includes('args')
-        ? query.where(
-            this._knexClient.raw(
-              `${this.castAsNumericWhenRequested(
-                this.getJsonObjectPropertySqlFragment('args', clause.field.slice(5)),
-                clause.type,
-              )} ${this.getSqlOperator(clause.operator)} ?`,
-              [this.convertValue(clause.value, clause.type)],
-            ),
-          )
-        : query.where(
-            this._knexClient.raw(
-              `${this.castAsNumericWhenRequested(
-                `${table}."${clause.field}"`,
-                clause.type,
-              )} ${this.getSqlOperator(clause.operator)} ?`,
-              [this.convertValue(clause.value, clause.type)],
-            ),
-          );
+      const queriedField = clause.field.includes('args')
+        ? this.getJsonObjectPropertySqlFragment('args', clause.field.slice(5))
+        : `${table}."${clause.field}"`;
+      query.where(
+        this._knexClient.raw(
+          `${this.castAsNumericWhenRequested(
+            queriedField,
+            clause.type,
+          )} ${this.getSqlOperator(clause.operator)} ?`,
+          [this.convertValue(clause.value, clause.type)],
+        ),
+      );
     }
 
     for (const clause of sortClauses) {
+      const queriedField = clause.field.includes('args')
+        ? this.getJsonObjectPropertySqlFragment('args', clause.field.slice(5))
+        : `${table}."${clause.field}"`;
       if (clause.type == FilterType.TEXT) {
-        clause.field.includes('args')
-          ? query.orderByRaw(
-              `${this.getJsonObjectPropertySqlFragment('args', clause.field.slice(5))} ${
-                clause.direction
-              }`,
-            )
-          : query.orderByRaw(`${table}."${clause.field}" ${clause.direction}`);
+        query.orderByRaw(`${queriedField} ${clause.direction}`);
       } else {
-        clause.field.includes('args')
-          ? query.orderByRaw(
-              `${this.castAsNumericWhenRequested(
-                this.getJsonObjectPropertySqlFragment('args', clause.field.slice(5)),
-                clause.type,
-              )}  ${clause.direction}`,
-            )
-          : query.orderByRaw(
-              `${this.castAsNumericWhenRequested(
-                `${table}."${clause.field}"`,
-                clause.type,
-              )} ${clause.direction}`,
-            );
+        query.orderByRaw(
+          `${this.castAsNumericWhenRequested(queriedField, clause.type)} ${
+            clause.direction
+          }`,
+        );
       }
     }
 

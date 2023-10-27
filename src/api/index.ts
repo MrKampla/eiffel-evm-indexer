@@ -1,4 +1,4 @@
-import { createFileSystemBasedRouter, createRouter } from './router';
+import { createFileSystemBasedRouter } from './router';
 import { env } from './envApi';
 import { PersistenceObject } from '../types';
 import { getDb } from '../utils/getDb';

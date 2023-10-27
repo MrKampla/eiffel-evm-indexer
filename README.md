@@ -6,6 +6,17 @@ This is a simple Typescript indexer for any smart contract event logs on any EVM
 
 You just have to provide an RPC url (public works too!), chain ID and ABI of a target contract with address. No need to write any code or use any SDKs, archives or other bullshit.
 
+Indexer is eaisly extendable with custom actions and custom API endpoints. Run your own logic when an
+event is indexed and query the data however you want in your custom API endpoints.
+
+- [Deployment](#deployment)
+  - [environment variables](#environment-variables)
+- [Querying data](#querying-data)
+- [Custom API endpoints](#custom-api-endpoints)
+- [Custom event handlers (actions)](#custom-event-handlers-actions)
+  - [Example](#example)
+- [GraphQL (NOT PRODUCTION READY)](#graphql-not-production-ready)
+
 ## Deployment
 
 ### environment variables
@@ -218,7 +229,119 @@ export default async (request: Request, db: PersistenceObject<Database>) => {
 };
 ```
 
-> NOTE: File system based routing does not work with nested directories yet. It will be fixed in the future.
+## Custom event handlers (actions)
+
+You can add a custom logic that will be run on every batch that was indexed. You can create your own actions by adding them to the `src/indexer/actions` directory. Event handler file has to `export default` an object with the following structure:
+
+```ts
+interface Action<DBType = unknown, BlockchainClientType = unknown> {
+  onInit: (
+    db: PersistenceObject<DBType>,
+    blockchainClient: BlockchainClient<BlockchainClientType>,
+  ) => Promise<void>;
+  onClear: (db: PersistenceObject<DBType>) => Promise<void>;
+  onBatchIndexed: (actionProps: {
+    db: PersistenceObject<DBType>;
+    eventLogsBatch: EventLog[];
+    indexedBlockNumber: bigint;
+    blockchainClient: BlockchainClient<BlockchainClientType>;
+  }) => Promise<void>;
+}
+```
+
+This is useful for example for saving the selected data in a different table, sending notifications, etc.
+Actions work well with custom API endpoints. You can query the tables that you've prepared in actions.
+
+### Example
+
+> I have a order book based DEX. I want to only save orders that haven't been filled before. My DEX emits two events: "OrderCreated" and "OrderFilled" with "tokenId" as an event property.
+
+Although our REST API query capabilities are strong, it's not possible to create such a query yet just with search params. So we can create a custom action that will save orders to a different table,
+wait for "OrderFilled" events and when this happens, it'll delete the filled order from the table.
+
+Let's create a custom action file in `src/indexer/actions/storeUnfilledOrders.ts`:
+
+```ts
+import { Action } from '.';
+import { Knex } from 'knex';
+import { SqlPersistenceBase } from '../../database/sqlPersistenceBase';
+
+const whenOrderIsFilled: Action<Knex, SqlPersistenceBase> = {
+  async onClear(db: SqlPersistenceBase) {
+    const knex = db.getUnderlyingDataSource();
+    const query = knex.schema.dropTableIfExists('unfilled_orders').toQuery();
+    await db.queryAll(query);
+  },
+  async onInit(db) {
+    await db.queryAll(
+      db
+        .getUnderlyingDataSource()
+        .schema.createTableIfNotExists('unfilled_orders', (table) => {
+          table.text('tokenId').primary();
+        })
+        .toQuery(),
+    );
+  },
+  async onBatchIndexed({ db, eventLogsBatch }) {
+    const orderCreatedEvents = eventLogsBatch.filter(
+      ({ eventName }) => eventName === 'PublicOrderCreated',
+    );
+    const orderFilledEvents = eventLogsBatch.filter(
+      ({ eventName }) => eventName === 'PublicOrderFilled',
+    );
+
+    if (orderCreatedEvents.length > 0) {
+      const query = db
+        .getUnderlyingDataSource()
+        .insert(
+          orderCreatedEvents.map((event) => ({
+            tokenId: event.args.tokenId.toString(),
+          })),
+        )
+        .into('unfilled_orders')
+        .toQuery();
+
+      await db.queryAll(query);
+    }
+
+    if (orderFilledEvents.length === 0) return;
+
+    const query = db
+      .getUnderlyingDataSource()
+      .delete()
+      .from('unfilled_orders')
+      .whereIn(
+        'tokenId',
+        orderFilledEvents.map((event) => event.args.tokenId.toString()),
+      )
+      .toQuery();
+
+    await db.queryAll(query);
+  },
+};
+
+export default whenOrderIsFilled;
+```
+
+Then we can create a custom API endpoint that will query the orders table and return only unfilled orders.
+Create a file `src/api/endpoints/unfilled-orders.ts`:
+
+```ts
+import { ResponseWithCors } from '../../responseWithCors';
+import { SqlPersistenceBase } from '../../../database/sqlPersistenceBase';
+
+export default async (_request: Request, db: SqlPersistenceBase) => {
+  return new ResponseWithCors(
+    JSON.stringify(
+      await db.queryAll(
+        db.getUnderlyingDataSource().select().from('unfilled_orders').toQuery(),
+      ),
+    ),
+  );
+};
+```
+
+Now the endpoint should be available at `/api/unfilled-orders`.
 
 ## GraphQL (NOT PRODUCTION READY)
 

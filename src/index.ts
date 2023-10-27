@@ -16,4 +16,4 @@ const db: PersistenceObject = getDb({
   dbName: env.DB_NAME,
 });
 
-new Indexer(db, viemEventsFetcher).run();
+new Indexer(db, viemEventsFetcher, viemClient).run();

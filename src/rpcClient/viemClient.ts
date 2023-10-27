@@ -14,6 +14,10 @@ export class ViemClient implements BlockchainClient {
     );
   }
 
+  getClient(): PublicClient {
+    return this.publicClient;
+  }
+
   public getLogs(params: GetLogsParams): Promise<EventLog[]> {
     return safeAsync(async () => this.publicClient.getLogs(params));
   }

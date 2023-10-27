@@ -1,47 +1,42 @@
 import { PersistenceObject } from '../types';
-import urlParser from 'node:url';
 import { ResponseWithCors } from './responseWithCors';
-import fs from 'fs/promises';
+
+const { FileSystemRouter } = Bun;
 
 type Handler = (req: Request, db: PersistenceObject) => Promise<Response>;
 
-export const createRouter = (db: PersistenceObject) => ({
-  handlers: [] as { path: string; handler: Handler }[],
-  when(path: string, handler: Handler) {
-    this.handlers.push({ path, handler });
-    return this;
-  },
-  route(request: Request): Promise<Response> {
-    const handler = this.handlers.find(
-      ({ path }) => urlParser.parse(request.url).pathname === path,
-    );
-    if (!handler) {
+export const createFileSystemBasedRouter = async (db: PersistenceObject) => {
+  const fsRouter = new FileSystemRouter({
+    style: 'nextjs',
+    dir: `${__dirname}/endpoints`,
+  });
+
+  const handlersCache = new Map<string, Handler>();
+
+  return {
+    route: async (request: Request): Promise<Response> => {
+      const apiPath = new URL(request.url).pathname;
+      const preloadedRequestHandler =
+        handlersCache.get(apiPath) ?? handlersCache.get(`${apiPath}/`);
+      if (preloadedRequestHandler) {
+        return preloadedRequestHandler(request, db);
+      }
+
+      const matchedFile = fsRouter.match(
+        new URL(request.url).pathname.replace('/api', ''),
+      );
+      if (matchedFile) {
+        const handler = (await import(matchedFile.filePath)).default as (
+          req: Request,
+          db: PersistenceObject,
+        ) => Promise<Response>;
+        handlersCache.set(`${apiPath}/`, handler);
+        return handler(request, db);
+      }
+
       return Promise.resolve(
         new ResponseWithCors(JSON.stringify({ error: 'Not found' }), { status: 404 }),
       );
-    }
-    return handler.handler(request, db);
-  },
-});
-
-export const createFileSystemBasedRouter = async (db: PersistenceObject) => {
-  const endpoints = await fs.readdir(`${__dirname}/endpoints`);
-  const router = createRouter(db);
-
-  endpoints.forEach(async (endpoint) => {
-    const handleRequest = (await import(`./endpoints/${endpoint}`)).default as (
-      req: Request,
-      db: PersistenceObject,
-    ) => Promise<Response>;
-
-    if (endpoint === 'index.ts') {
-      router.when(`/`, handleRequest);
-      return;
-    }
-
-    const endpointName = endpoint.split('.')[0];
-    router.when(`/api/${endpointName}`, handleRequest);
-  });
-
-  return router;
+    },
+  };
 };

@@ -2,7 +2,7 @@
   "name": "eiffel-evm-indexer",
   "module": "src/index.ts",
   "type": "module",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "scripts": {
     "dev": "bunx concurrently \"bun --watch ./src/index.ts\" \"bun --watch ./src/api/index.ts\"",
     "start:indexer": "bun ./src/index.ts",
@@ -19,13 +19,19 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "better-sqlite3": "^9.0.0",
     "commander": "^11.0.0",
     "graphql": "^16.8.1",
     "graphql-yoga": "^5.0.0",
     "knex": "^3.0.1",
     "mongodb": "^6.1.0",
     "pg": "^8.11.3",
+    "sqlite3": "^5.1.6",
     "viem": "^1.15.1",
     "zod": "^3.22.4"
-  }
+  },
+  "trustedDependencies": [
+    "sqlite3",
+    "better-sqlite3"
+  ]
 }

@@ -5,6 +5,7 @@ import { BIGINT_MATH } from '../utils/bigIntMath';
 import { createUniqueIdForEvent } from '../utils/createUniqueIdForEvent';
 import { logger } from '../utils/logger';
 import { SqlPersistenceBase } from './sqlPersistenceBase';
+import { Knex } from 'knex';
 
 export class SqlitePersistence extends SqlPersistenceBase {
   db: Database;
@@ -13,50 +14,51 @@ export class SqlitePersistence extends SqlPersistenceBase {
     dbUrl: string,
     private clearDb: boolean = false,
   ) {
-    super('sqlite3');
+    super('sqlite3', dbUrl, true);
     this.db = new Database(dbUrl, { create: true });
   }
-  public getUnderlyingDataSource(): Database {
-    return this.db;
+
+  public getUnderlyingDataSource(): Knex {
+    return this._knexClient;
   }
 
-  public async disconnect(): Promise<void> {
+  public async disconnect() {
     this.db.close();
   }
 
-  private prepareEventsTable(): void {
+  private async prepareEventsTable() {
     if (this.clearDb) {
-      this.db.prepare('DROP TABLE IF EXISTS events').run();
+      this.db.run(this._knexClient.schema.dropTableIfExists('events').toQuery());
       logger.log(`Dropped tables`);
     }
-    this.db
-      .prepare(
-        `CREATE TABLE IF NOT EXISTS events (
-        id TEXT PRIMARY KEY,
-        address TEXT,
-        "blockNumber" INTEGER,
-        "eventName" TEXT,
-        args TEXT,
-        "chainId" INTEGER,
-        "transactionHash" TEXT
-        );`,
-      )
-      .run();
+    this.db.run(
+      this._knexClient.schema
+        .createTableIfNotExists('events', (table) => {
+          table.text('id').primary();
+          table.text('address');
+          table.integer('blockNumber');
+          table.text('eventName');
+          table.text('args');
+          table.integer('chainId');
+          table.text('transactionHash');
+        })
+        .toQuery(),
+    );
     logger.log(`Initialized tables events and indexing_status`);
   }
 
   private prepareIndexingStatusTable(): void {
     if (this.clearDb) {
-      this.db.prepare('DROP TABLE IF EXISTS indexing_status').run();
+      this.db.run(this._knexClient.schema.dropTableIfExists('indexing_status').toQuery());
     }
-    this.db
-      .prepare(
-        `CREATE TABLE IF NOT EXISTS indexing_status (
-            "chainId" INTEGER PRIMARY KEY,
-            "blockNumber" INTEGER
-        );`,
-      )
-      .run();
+    this.db.run(
+      this._knexClient.schema
+        .createTableIfNotExists('indexing_status', (table) => {
+          table.integer('chainId').primary();
+          table.integer('blockNumber');
+        })
+        .toQuery(),
+    );
   }
 
   async init() {
@@ -71,33 +73,41 @@ export class SqlitePersistence extends SqlPersistenceBase {
     const latestIndexedBlock =
       latestBlockNumber ?? BIGINT_MATH.max(...batch.map((event) => event.blockNumber));
 
-    const insertEventLog = this.db.prepare(
-      `INSERT INTO events 
-        (id, address, blockNumber, eventName, chainId, args, transactionHash)
-        VALUES 
-        (?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(id) 
-        DO UPDATE SET blockNumber=excluded.blockNumber, transactionHash = excluded.transactionHash`,
-    );
-    const insertIndexingStatus = this.db.prepare(
-      'INSERT INTO indexing_status (chainId, blockNumber) VALUES (?, ?) ON CONFLICT(chainId) DO UPDATE SET blockNumber = excluded.blockNumber',
-    );
-    const writeLogsBatch = this.db.transaction((events: EventLog[]) => {
-      events.forEach((event) => {
-        insertEventLog.run(
-          createUniqueIdForEvent(event),
-          event.address,
-          event.blockNumber,
-          event.eventName,
-          this.chainId.toString(),
-          serialize(event.args),
-          event.transactionHash,
+    const writeLogsBatch = this.db.transaction(
+      (events: EventLog[], latestIndexedBlockString: string) => {
+        this.db.run(
+          this._knexClient
+            .insert(
+              events.map((event) => ({
+                id: createUniqueIdForEvent(event),
+                chainId: this.chainId.toString(),
+                args: serialize(event.args),
+                blockNumber: event.blockNumber.toString(),
+                eventName: event.eventName,
+                transactionHash: event.transactionHash,
+                address: event.address,
+              })),
+            )
+            .into('events')
+            .onConflict('id')
+            .merge()
+            .toQuery(),
         );
-      });
-      insertIndexingStatus.run(this.chainId.toString(), latestIndexedBlock.toString());
-    });
+        this.db.run(
+          this._knexClient
+            .insert({
+              chainId: this.chainId.toString(),
+              blockNumber: latestIndexedBlockString,
+            })
+            .into('indexing_status')
+            .onConflict('chainId')
+            .merge()
+            .toQuery(),
+        );
+      },
+    );
 
-    writeLogsBatch(batch);
+    writeLogsBatch(batch, latestIndexedBlock.toString());
   }
 
   public async getLatestIndexedBlockForChain(
@@ -117,7 +127,7 @@ export class SqlitePersistence extends SqlPersistenceBase {
     return `JSON_EXTRACT(${column}, '$.${propertyName}') `;
   }
 
-  protected async queryAll<T>(query: string): Promise<T[]> {
+  public async queryAll<T>(query: string): Promise<T[]> {
     logger.log(query);
     return Promise.resolve(this.db.query(query).all() as T[]);
   }
@@ -125,10 +135,5 @@ export class SqlitePersistence extends SqlPersistenceBase {
   public async queryOne<T>(query: string): Promise<T> {
     logger.log(query);
     return Promise.resolve(this.db.query(query).get() as T);
-  }
-
-  public async queryRun(query: string): Promise<void> {
-    logger.log(query);
-    return Promise.resolve(this.db.prepare(query).run());
   }
 }
