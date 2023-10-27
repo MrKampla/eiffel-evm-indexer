@@ -6,20 +6,19 @@ This is a simple Typescript indexer for any smart contract event logs on any EVM
 
 You just have to provide an RPC url (public works too!), chain ID and ABI of a target contract with address. No need to write any code or use any SDKs, archives or other bullshit.
 
-Indexer is eaisly extendable with custom actions and custom API endpoints. Run your own logic when an
+Indexer is easily extendable with custom actions and custom API endpoints. Run your own logic when an
 event is indexed and query the data however you want in your custom API endpoints.
 
 - [Deployment](#deployment)
-  - [environment variables](#environment-variables)
 - [Querying data](#querying-data)
 - [Custom API endpoints](#custom-api-endpoints)
 - [Custom event handlers (actions)](#custom-event-handlers-actions)
   - [Example](#example)
 - [GraphQL (NOT PRODUCTION READY)](#graphql-not-production-ready)
+- [Issues](#issues)
+  - [Knex SQLite connection in Bun is missing bindings](#knex-sqlite-connection-in-bun-is-missing-bindings)
 
 ## Deployment
-
-### environment variables
 
 In order to run the indexer you don't have to write any code. Every contract can be indexed just by providing a contract ABI and a target address. This indexer comes with an ABI parser CLI tool that can be used to generate a list of targets for indexer.
 
@@ -173,29 +172,30 @@ You can create your own API endpoints by adding request handlers to the `src/api
 Request handler file has to `export default` a function with the following signature:
 
 ```ts
-  async (request: Request, db: PersistenceObject<>): ResponseWithCors;
+(request: Request, db: PersistenceObject) => Promise<ResponseWithCors>;
 ```
 
-example `src/api/endpoints/custom-endpoint.ts` in postgres:
+example `src/api/endpoints/custom-endpoint.ts`:
 
 ```ts
-import { Knex } from 'knex';
-import { PersistenceObject } from '../../types';
-import { ResponseWithCors } from '../responseWithCors';
+import { ResponseWithCors } from '../../responseWithCors';
+import { SqlPersistenceBase } from '../../../database/sqlPersistenceBase';
 
-// you have access to the db and the request object
-// WARNING: PersistanceObject is a generic type and it differs depending on what db you use.
-// For example, for SQLite it's a "bun:sqlite" Database instance, for postgres it's Knex
-// and for Mongo it's MongoClient
-export default async (request: Request, db: PersistenceObject<Knex>) => {
+// You have access to the db and the request object.
+// If you use SQL based database, you can use the SqlPersistenceBase type in order to get
+// better type safety. For MongoDB, just use PersistenceObject<MongoClient>.
+export default async (request: Request, db: SqlPersistenceBase) => {
   // you can use the request object to get query parameters, headers, etc.
   const { searchParams } = new URL(request.url);
   const amount = +(searchParams.get('amount') ?? 0);
 
   // you can use the db to query the database
-  const baseDb = db.getUnderlyingDataSource();
-  const result = (await knex.raw(`SELECT 1 + ${amount} AS result`)).rows[0]
-    .result as number;
+  const knex = db.getUnderlyingDataSource();
+  const result = (
+    await db.queryOne<{ result: number }>(
+      knex.raw(`SELECT 1 + ${amount} AS result`).toQuery(),
+    )
+  ).result;
 
   return new ResponseWithCors(
     JSON.stringify({
@@ -206,28 +206,6 @@ export default async (request: Request, db: PersistenceObject<Knex>) => {
 ```
 
 Now, if you use docker, please restart the container. After that you should be able to access your endpoint at `/api/custom-endpoint`.
-
-The same endpoint in SQLite (for reference):
-
-```ts
-import { PersistenceObject } from '../../types';
-import { ResponseWithCors } from '../responseWithCors';
-import Database from 'bun:sqlite';
-
-export default async (request: Request, db: PersistenceObject<Database>) => {
-  const { searchParams } = new URL(request.url);
-
-  const amount = +(searchParams.get('amount') ?? 0);
-
-  const dbObj = db.getUnderlyingDataSource();
-  const result = (<any>dbObj.query(`SELECT 1 + ${amount} AS result`).get()).result;
-  return new ResponseWithCors(
-    JSON.stringify({
-      result,
-    }),
-  );
-};
-```
 
 ## Custom event handlers (actions)
 
@@ -385,3 +363,9 @@ query {
   }
 }
 ```
+
+## Issues
+
+### Knex SQLite connection in Bun is missing bindings
+
+Knex DB connection wiht SQLite in Bun doesn't work due to missing bindings. This issue is caused by postinstall scripts not being run for packages that are not listed as trusted. [This issue](https://github.com/oven-sh/bun/issues/4959) tracks the problem. Apparently, there is a solution to that but I couldn't get the Indexer to work in docker so for now please only use Knex as a querybuilder if you use SQLite. For Postgres it works fine.
