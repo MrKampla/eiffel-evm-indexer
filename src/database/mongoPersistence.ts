@@ -1,4 +1,4 @@
-import { MongoClient, Db, Collection, Document } from 'mongodb';
+import { MongoClient, Db, Collection, Document, Filter } from 'mongodb';
 import { EventLog, PersistenceObject } from '../types';
 import { createUniqueIdForEvent } from '../utils/createUniqueIdForEvent';
 import { logger } from '../utils/logger';
@@ -22,6 +22,10 @@ export class MongoDBPersistence implements PersistenceObject {
     this.client = new MongoClient(dbUrl);
   }
 
+  queryAll<T>(_query: string): Promise<T[]> {
+    throw new Error('Not supported in MongoDB');
+  }
+
   getUnderlyingDataSource(): MongoClient {
     return this.client;
   }
@@ -41,7 +45,7 @@ export class MongoDBPersistence implements PersistenceObject {
   }): Promise<T[]> {
     if (!this.db) throw new Error('Database not initialized');
 
-    const mongoQuery = {
+    const mongoQuery: Filter<T> = {
       $and: whereClauses.map(this.convertWhereToMongoQuery.bind(this)),
     };
 

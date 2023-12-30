@@ -1,7 +1,6 @@
 import {
   BlockNumberAndLogBatchTuple,
   BlockchainClient,
-  EventLog,
   EventsFetcher,
   GetEventsBatchParam,
 } from '../types';
@@ -17,6 +16,7 @@ export class EventLogsFetcher implements EventsFetcher {
     batchSize = env.BLOCK_FETCH_BATCH_SIZE,
     start = 0n,
     end = 0n, // if end is 0, indexer will run indefinitely
+    reorgDepth = env.REORG_REFETCH_DEPTH,
     targets,
   }: GetEventsBatchParam) {
     let currentBlock = start;
@@ -26,9 +26,18 @@ export class EventLogsFetcher implements EventsFetcher {
       const toBlock = BIGINT_MATH.min(currentBlock + batchSize, latestBlockNumber);
 
       if (toBlock === currentBlock || currentBlock > toBlock) {
-        logger.log(`Waiting for new blocks...`);
+        if (reorgDepth === 0n) {
+          logger.log('Waiting for new blocks...');
+          await setTimeout(env.BLOCK_FETCH_INTERVAL);
+          continue;
+        }
+
+        logger.log(
+          `Indexed to latest block ${latestBlockNumber}. Refetching latest ${reorgDepth} blocks in order to mitigate reorgs...`,
+        );
+        currentBlock =
+          latestBlockNumber > reorgDepth ? latestBlockNumber - reorgDepth : 0n;
         await setTimeout(env.BLOCK_FETCH_INTERVAL);
-        continue;
       }
 
       logger.log(`Fetching from ${currentBlock} to ${toBlock}`);

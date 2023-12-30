@@ -6,6 +6,7 @@ import { createUniqueIdForEvent } from '../utils/createUniqueIdForEvent';
 import { logger } from '../utils/logger';
 import { SqlPersistenceBase } from './sqlPersistenceBase';
 import { Knex } from 'knex';
+import { safeAsync } from '../utils/safeAsync';
 
 export class SqlitePersistence extends SqlPersistenceBase {
   db: Database;
@@ -27,23 +28,27 @@ export class SqlitePersistence extends SqlPersistenceBase {
   }
 
   private async prepareEventsTable() {
-    if (this.clearDb) {
-      this.db.run(this._knexClient.schema.dropTableIfExists('events').toQuery());
-      logger.log(`Dropped tables`);
-    }
-    this.db.run(
-      this._knexClient.schema
-        .createTableIfNotExists('events', (table) => {
-          table.text('id').primary();
-          table.text('address');
-          table.integer('blockNumber');
-          table.text('eventName');
-          table.text('args');
-          table.integer('chainId');
-          table.text('transactionHash');
-        })
-        .toQuery(),
-    );
+    await safeAsync(async () => {
+      if (this.clearDb) {
+        this.db.run(this._knexClient.schema.dropTableIfExists('events').toQuery());
+        logger.log(`Dropped tables`);
+      }
+    });
+    await safeAsync(async () => {
+      this.db.run(
+        this._knexClient.schema
+          .createTableIfNotExists('events', (table) => {
+            table.text('id').primary();
+            table.text('address');
+            table.integer('blockNumber');
+            table.text('eventName');
+            table.text('args');
+            table.integer('chainId');
+            table.text('transactionHash');
+          })
+          .toQuery(),
+      );
+    });
     logger.log(`Initialized tables events and indexing_status`);
   }
 
@@ -63,10 +68,12 @@ export class SqlitePersistence extends SqlPersistenceBase {
 
   async init() {
     logger.log(`Initializing sqlite instance`);
-    this.db.transaction(() => {
-      this.prepareEventsTable();
-      this.prepareIndexingStatusTable();
-    })();
+    await safeAsync(async () =>
+      this.db.transaction(() => {
+        this.prepareEventsTable();
+        this.prepareIndexingStatusTable();
+      })(),
+    );
   }
 
   public async saveBatch(batch: EventLog[], latestBlockNumber?: bigint): Promise<void> {
@@ -75,24 +82,26 @@ export class SqlitePersistence extends SqlPersistenceBase {
 
     const writeLogsBatch = this.db.transaction(
       (events: EventLog[], latestIndexedBlockString: string) => {
-        this.db.run(
-          this._knexClient
-            .insert(
-              events.map((event) => ({
-                id: createUniqueIdForEvent(event),
-                chainId: this.chainId.toString(),
-                args: serialize(event.args),
-                blockNumber: event.blockNumber.toString(),
-                eventName: event.eventName,
-                transactionHash: event.transactionHash,
-                address: event.address,
-              })),
-            )
-            .into('events')
-            .onConflict('id')
-            .merge()
-            .toQuery(),
-        );
+        if (events.length) {
+          this.db.run(
+            this._knexClient
+              .insert(
+                events.map((event) => ({
+                  id: createUniqueIdForEvent(event),
+                  chainId: this.chainId.toString(),
+                  args: serialize(event.args),
+                  blockNumber: event.blockNumber.toString(),
+                  eventName: event.eventName,
+                  transactionHash: event.transactionHash,
+                  address: event.address,
+                })),
+              )
+              .into('events')
+              .onConflict('id')
+              .merge()
+              .toQuery(),
+          );
+        }
         this.db.run(
           this._knexClient
             .insert({
@@ -107,33 +116,37 @@ export class SqlitePersistence extends SqlPersistenceBase {
       },
     );
 
-    writeLogsBatch(batch, latestIndexedBlock.toString());
+    await safeAsync(async () => writeLogsBatch(batch, latestIndexedBlock.toString()));
   }
 
   public async getLatestIndexedBlockForChain(
     chainId: number,
   ): Promise<number | undefined> {
-    return (
-      this.db
-        .query(`SELECT blockNumber FROM indexing_status WHERE chainId = ${chainId}`)
-        .get() as { blockNumber?: number }
-    )?.blockNumber;
+    return safeAsync(
+      async () =>
+        (
+          this.db
+            .query(`SELECT blockNumber FROM indexing_status WHERE chainId = ${chainId}`)
+            .get() as { blockNumber?: number }
+        )?.blockNumber,
+    );
   }
 
-  protected getJsonObjectPropertySqlFragment(
-    column: string,
-    propertyName: string,
-  ): string {
+  public getJsonObjectPropertySqlFragment(column: string, propertyName: string): string {
     return `JSON_EXTRACT(${column}, '$.${propertyName}') `;
   }
 
   public async queryAll<T>(query: string): Promise<T[]> {
-    logger.log(query);
-    return Promise.resolve(this.db.query(query).all() as T[]);
+    return safeAsync(() => {
+      logger.log(query);
+      return Promise.resolve(this.db.query(query).all() as T[]);
+    });
   }
 
   public async queryOne<T>(query: string): Promise<T> {
-    logger.log(query);
-    return Promise.resolve(this.db.query(query).get() as T);
+    return safeAsync(() => {
+      logger.log(query);
+      return Promise.resolve(this.db.query(query).get() as T);
+    });
   }
 }

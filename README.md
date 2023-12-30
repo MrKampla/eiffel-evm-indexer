@@ -9,7 +9,9 @@ You just have to provide an RPC url (public works too!), chain ID and ABI of a t
 Indexer is easily extendable with custom actions and custom API endpoints. Run your own logic when an
 event is indexed and query the data however you want in your custom API endpoints.
 
+- [How to run](#how-to-run)
 - [Deployment](#deployment)
+  - [ABI Parser Tool](#abi-parser-tool)
 - [Querying data](#querying-data)
 - [Custom API endpoints](#custom-api-endpoints)
 - [Custom event handlers (actions)](#custom-event-handlers-actions)
@@ -18,37 +20,23 @@ event is indexed and query the data however you want in your custom API endpoint
 - [Issues](#issues)
   - [Knex SQLite connection in Bun is missing bindings](#knex-sqlite-connection-in-bun-is-missing-bindings)
 
-## Deployment
+## How to run
 
 In order to run the indexer you don't have to write any code. Every contract can be indexed just by providing a contract ABI and a target address. This indexer comes with an ABI parser CLI tool that can be used to generate a list of targets for indexer.
 
-1. install dependencies:
+1. Install [Bun](https://bun.sh) runtime and create a repo with `bun init`.
+2. Install eiffel-evm-indexer npm package:
 
    ```bash
-   bun install
+   bun i eiffel-evm-indexer
    ```
 
-2. run the ABI parser tool. **WARNING**: this tool only accepts Hardhat output ABI from `deployments` directory
-
-   ```bash
-   bun run create:targets -a <path to ABI file> -e <event names to index separated by space>
-   ```
-
-   example:
-
-   ```bash
-   bun run create:targets -a ./abi.json -e "Transfer" "Approval"
-   ```
-
-   This will generate a list of targets in a file `targets.json`.
-
-   > If you want to index events from multiple contracts, then you can run the `create:targets` command multiple times with differend params and your events will be appended to the targets file.
-
-   If you don't have Hardhat output ABI, then you can create `targets.json` file manually. It has a following structure:
+3. In the directory from which you will run indexer, create a file `targets.json` (either manually or parse hardhat deployment ouput with [ABI Parser Tool](#abi-parser-tool)) with the following structure:
 
    ```ts
    [
      {
+       // event ABI item
        abiItem: {
          anonymous: false,
          inputs: [
@@ -68,12 +56,15 @@ In order to run the indexer you don't have to write any code. Every contract can
          name: 'MyEventName',
          type: 'event',
        },
+       // address of the contract that emits the event
        address: '0x3a2Eb2622B4f10de9E78bd2057a0AB7a6F70B95F',
      },
    ];
    ```
 
-3. fill in the environment variables in the docker compose file for the appropriate environment (dev or prod) or in the `.env` file in the root directory of the project if you don;t want to use docker:
+   > If you want to index events from multiple contracts, then you can add multiple objects to the array.
+
+4. In the directory from which you will run indexer, create a `.env` file and fill in the environment variables:
 
    For indexer:
 
@@ -91,34 +82,89 @@ In order to run the indexer you don't have to write any code. Every contract can
      BLOCK_CONFIRMATIONS: <number> default: 5
      BLOCK_FETCH_INTERVAL: <number> in miliseconds, default: 1000
      BLOCK_FETCH_BATCH_SIZE: <number> how many blocks should be fetched in a single batch request, default: 1000
-     DB_TYPE: <'postgres' | 'sqlite'> default: 'sqlite'
+     DB_TYPE: <'postgres' | 'sqlite' | 'mongo'> default: 'sqlite'
      DB_URL: <string> for postgres it is a connection string, for sqlite it is a file name,  default: 'events.db' (for SQLite)
-     CLEAR_DB: <boolean> clears the db before starting the indexer, usefull for development, default: false
+     CLEAR_DB: <boolean> clears the db before starting the indexer, useful for development, default: false
+     REORG_REFETCH_DEPTH: <number> how many latest blocks should be refetched when fully indexed, default: 0 (no refetch)
      ```
 
    For API:
 
    ```bash
-     CHAIN_ID=<number> e.g. 137
+     CHAIN_ID= <number> e.g. 137
      API_PORT: <number> default 8080
-     DB_TYPE: <'postgres' | 'sqlite'> default: 'sqlite'
+     DB_TYPE: <'postgres' | 'sqlite' | 'mongo'> default: 'sqlite'
      DB_URL: <string> for postgres it is a connection string, for SQLite it can be a path to the file or in-memory specifier ('memory') default: 'events.db' (for SQLite).
      GRAPHQL: <string> 'true' | 'false' - enables GraphQL API instead of rest
    ```
 
-4. run docker compose for dev or prod environment or dev script:
+5. run the indexer:
+   EIFFEL comes with two aliases for running the indexer. You can either use full package name `eiffel-evm-indexer`,or a shorter alias `eiffel`.
 
    ```bash
-   docker compose -f docker-compose.[env].yml up
+    # start both indexer and API server in a single process
+    bunx eiffel
+    # or start indexer and API server separately
+    bunx eiffel indexer
+    bunx eiffel api
    ```
 
-   This will start the indexer and the API server. Dev docker file will autoreload the indexer and the API on every code change. Prod one is optimized for production - you just have to pass the environment variables to the container.
+6. Enjoy indexed data with zero latency and no costs!
 
-   ```bash
-   bun run dev
-   ```
+## Deployment
 
-5. Enjoy indexed data with zero latency and no costs!
+You can deploy the indexer to any cloud provider or your own server. However, we suggest to use Docker to deploy the indexer. Example `Dockerfile` and `docker-compose` files are provided in the repository.
+
+### ABI Parser Tool
+
+Eiffel comes with an ABI parser tool that can be used to generate a list of targets for indexer based on the contracts ABI.
+
+**WARNING**: this tool only accepts Hardhat output ABI from `deployments` directory
+
+```bash
+eiffel create:targets -a <path to ABI file> -e <event names to index separated by space>
+```
+
+example:
+
+```bash
+eiffel create:targets -a ./abi.json -e "Transfer" "Approval"
+```
+
+> `-e` flag is optional. If you don't provide it, then all events from a given contract will be indexed.
+
+This will generate a list of targets in a file `targets.json`.
+
+> If you want to index events from multiple contracts, then you can run the `create:targets` command multiple times with differend params and your events will be appended to the targets file.
+
+If you don't have Hardhat output ABI, then you can create `targets.json` file manually. It has a following structure:
+
+```ts
+[
+  {
+    abiItem: {
+      anonymous: false,
+      inputs: [
+        {
+          indexed: false,
+          internalType: 'address',
+          name: 'addressInput',
+          type: 'address',
+        },
+        {
+          indexed: false,
+          internalType: 'uint256',
+          name: 'uintInput',
+          type: 'uint256',
+        },
+      ],
+      name: 'MyEventName',
+      type: 'event',
+    },
+    address: '0x3a2Eb2622B4f10de9E78bd2057a0AB7a6F70B95F',
+  },
+];
+```
 
 ## Querying data
 
@@ -168,14 +214,14 @@ If you have multiple `where` clauses, then you can separate them by a comma, for
 
 ## Custom API endpoints
 
-You can create your own API endpoints by adding request handlers to the `src/api/endpoints` directory.
+You can create your own API endpoints by adding request handlers by creating a `./endpoints` directory (in the same directory from which you will be run) and adding files with request handlers to it. Name of the file will be the name of the endpoint (Next.js style) and the endpoint will be available at `/api/<endpoint-name>`.
 Request handler file has to `export default` a function with the following signature:
 
 ```ts
 (request: Request, db: PersistenceObject) => Promise<ResponseWithCors>;
 ```
 
-example `src/api/endpoints/custom-endpoint.ts`:
+example `./endpoints/custom-endpoint.ts`:
 
 ```ts
 import { ResponseWithCors } from '../../responseWithCors';
@@ -205,11 +251,11 @@ export default async (request: Request, db: SqlPersistenceBase) => {
 };
 ```
 
-Now, if you use docker, please restart the container. After that you should be able to access your endpoint at `/api/custom-endpoint`.
+You should be able to access your endpoint at `/api/custom-endpoint`.
 
 ## Custom event handlers (actions)
 
-You can add a custom logic that will be run on every batch that was indexed. You can create your own actions by adding them to the `src/indexer/actions` directory. Event handler file has to `export default` an object with the following structure:
+You can add a custom logic that will be run on every batch that was indexed. You can create your own actions by adding them to the `./actions` directory. This directory has to be in the same directory from which you will be running the indexer command. Event handler file has to `export default` an object with the following structure:
 
 ```ts
 interface Action<DBType = unknown, BlockchainClientType = unknown> {
@@ -237,7 +283,7 @@ Actions work well with custom API endpoints. You can query the tables that you'v
 Although our REST API query capabilities are strong, it's not possible to create such a query yet just with search params. So we can create a custom action that will save orders to a different table,
 wait for "OrderFilled" events and when this happens, it'll delete the filled order from the table.
 
-Let's create a custom action file in `src/indexer/actions/storeUnfilledOrders.ts`:
+Let's create a custom action file `.//actions/storeUnfilledOrders.ts`:
 
 ```ts
 import { Action } from '.';
@@ -302,7 +348,7 @@ export default whenOrderIsFilled;
 ```
 
 Then we can create a custom API endpoint that will query the orders table and return only unfilled orders.
-Create a file `src/api/endpoints/unfilled-orders.ts`:
+Create a file `./endpoints/unfilled-orders.ts`:
 
 ```ts
 import { ResponseWithCors } from '../../responseWithCors';
@@ -320,6 +366,12 @@ export default async (_request: Request, db: SqlPersistenceBase) => {
 ```
 
 Now the endpoint should be available at `/api/unfilled-orders`.
+
+If you want to copy the functionality of filtering and sorting results which is described in [querying data](#querying-data) section, you can use `filterEventsWithURLParams` function which can be imported from `eiffel-evm-indexer` package.
+
+```ts
+import { filterEventsWithURLParams } from 'eiffel-evm-indexer';
+```
 
 ## GraphQL (NOT PRODUCTION READY)
 

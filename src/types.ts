@@ -10,10 +10,10 @@ export interface PersistenceObject<UnderlyingDataSource = unknown> {
   disconnect(): Promise<void>;
   filter<T extends {}>({
     table,
-    whereClauses = [],
-    sortClauses = [],
-    limit = 100,
-    offset = 0,
+    whereClauses,
+    sortClauses,
+    limit,
+    offset,
   }: {
     table: string;
     whereClauses?: WhereClause[];
@@ -22,6 +22,7 @@ export interface PersistenceObject<UnderlyingDataSource = unknown> {
     offset?: number;
   }): Promise<T[]>;
   getUnderlyingDataSource(): UnderlyingDataSource;
+  queryAll<T>(query: string): Promise<T[]>;
 }
 
 export interface IndexerProps {
@@ -50,6 +51,7 @@ export interface GetEventsBatchParam {
   batchSize?: bigint;
   start?: bigint;
   end?: bigint;
+  reorgDepth?: bigint;
   targets: IndexerTarget[];
 }
 
@@ -81,4 +83,22 @@ export interface BlockchainClient<T = unknown> {
 export interface IndexingStatus {
   chainId: bigint;
   blockNumber: bigint;
+}
+
+export interface Order {
+  id: string;
+  address: string;
+  blockNumber: bigint;
+  eventName: string;
+  args: string;
+  chainId: number;
+  transactionHash: string;
+  priceMakerSellTokenInMakerBuyToken: string;
+  priceMakerBuyTokenInMakerSellToken: string;
+  orderId: string;
+  orderStatus: 'FILLED' | 'UNFILLED' | 'CANCELLED';
+  createdAt: Date;
+  completedAt?: Date | null;
+  makerSellTokenAmount: bigint;
+  makerBuyTokenAmount: bigint;
 }

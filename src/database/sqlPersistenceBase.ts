@@ -42,7 +42,7 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
 
   abstract getLatestIndexedBlockForChain(chainId: number): Promise<number | undefined>;
 
-  protected abstract getJsonObjectPropertySqlFragment(
+  public abstract getJsonObjectPropertySqlFragment(
     column: string,
     propertyName: string,
   ): string;

@@ -7,7 +7,7 @@ export const safeAsync = async <T>(fn: () => Promise<T>): Promise<T> => {
       return await fn();
     } catch (e) {
       logger.error(e);
-      await setTimeout(1000);
+      await setTimeout(250);
     }
   }
 };

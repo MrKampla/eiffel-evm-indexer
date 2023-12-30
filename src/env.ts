@@ -12,14 +12,13 @@ if (isNaN(+process.env.CHAIN_ID)) {
 if (!process.env.CHAIN_RPC_URL) {
   throw new Error('CHAIN_RPC_URL not set');
 }
-if (!fs.existsSync(path.join(__dirname, '../targets.json'))) {
+const targetsPath = path.join(process.cwd(), './targets.json');
+if (!fs.existsSync(targetsPath)) {
   throw new Error(
-    'No TARGETS configured: create targets.json file at the root directory',
+    `No TARGETS configured: create targets.json at ${path.dirname(targetsPath)}`,
   );
 }
-const TARGETS = JSON.parse(
-  fs.readFileSync(path.join(__dirname, '../targets.json')).toString(),
-) as IndexerTarget[];
+const TARGETS = JSON.parse(fs.readFileSync(targetsPath).toString()) as IndexerTarget[];
 if (TARGETS) {
   const targetSchema = z.array(
     z.object({
@@ -60,4 +59,5 @@ export const env = {
   DB_SSL: process.env.DB_SSL === 'true',
   CLEAR_DB: process.env.CLEAR_DB === 'true',
   DB_NAME: process.env.DB_NAME,
+  REORG_REFETCH_DEPTH: BigInt(process.env.REORG_REFETCH_DEPTH || 0n),
 } as const;
