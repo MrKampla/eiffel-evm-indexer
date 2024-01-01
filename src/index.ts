@@ -3,6 +3,7 @@ export * from './index';
 export * from './env';
 
 export * from './api';
+export * from './main';
 export * from './database';
 export * from './indexer';
 export * from './indexer/eventLogsFetcher';

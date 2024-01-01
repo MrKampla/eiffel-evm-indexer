@@ -84,21 +84,3 @@ export interface IndexingStatus {
   chainId: bigint;
   blockNumber: bigint;
 }
-
-export interface Order {
-  id: string;
-  address: string;
-  blockNumber: bigint;
-  eventName: string;
-  args: string;
-  chainId: number;
-  transactionHash: string;
-  priceMakerSellTokenInMakerBuyToken: string;
-  priceMakerBuyTokenInMakerSellToken: string;
-  orderId: string;
-  orderStatus: 'FILLED' | 'UNFILLED' | 'CANCELLED';
-  createdAt: Date;
-  completedAt?: Date | null;
-  makerSellTokenAmount: bigint;
-  makerBuyTokenAmount: bigint;
-}

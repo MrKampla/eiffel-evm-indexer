@@ -5,30 +5,17 @@ import { FilterOperators, FilterType, SortClause, WhereClause } from './filters'
 export abstract class SqlPersistenceBase implements PersistenceObject {
   protected readonly _knexClient: knex.Knex;
 
-  constructor(client: 'pg' | 'sqlite3', dbUrl: string, dbSsl: boolean) {
-    if ('sqlite3' === client) {
-      // Knex with SQLite3 does not work in Bun due to missing bindings
-      // https://github.com/oven-sh/bun/issues/4959
-      // You can use it to build queries but not to execute them
-      this._knexClient = knex({
-        client: 'better-sqlite3',
-        useNullAsDefault: true,
-        connection: {
-          filename: dbUrl,
-        },
-        log: {
-          warn() {},
-        },
-      });
-      return;
-    }
+  constructor(client: 'pg' | 'better-sqlite3', dbUrl: string, dbSsl: boolean) {
     this._knexClient = knex({
       client,
       useNullAsDefault: true,
-      connection: {
-        connectionString: dbUrl,
-        ssl: dbSsl,
-      },
+      connection:
+        client === 'better-sqlite3'
+          ? { filename: dbUrl }
+          : {
+              connectionString: dbUrl,
+              ssl: dbSsl,
+            },
     });
   }
 

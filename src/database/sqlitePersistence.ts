@@ -15,7 +15,7 @@ export class SqlitePersistence extends SqlPersistenceBase {
     dbUrl: string,
     private clearDb: boolean = false,
   ) {
-    super('sqlite3', dbUrl, true);
+    super('better-sqlite3', dbUrl, true);
     this.db = new Database(dbUrl, { create: true });
   }
 
@@ -69,8 +69,8 @@ export class SqlitePersistence extends SqlPersistenceBase {
   async init() {
     logger.log(`Initializing sqlite instance`);
     await safeAsync(async () =>
-      this.db.transaction(() => {
-        this.prepareEventsTable();
+      this.db.transaction(async () => {
+        await this.prepareEventsTable();
         this.prepareIndexingStatusTable();
       })(),
     );

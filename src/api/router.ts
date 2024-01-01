@@ -3,30 +3,9 @@ import { PersistenceObject } from '../types';
 import { ResponseWithCors } from './responseWithCors';
 import { MatchedRoute } from 'bun';
 import { logger } from '../utils/logger';
-
-const { FileSystemRouter } = Bun;
+import { FileSystemRouter } from 'bun';
 
 export type Handler = (req: Request, db: PersistenceObject) => Promise<Response>;
-
-const invokeEndpointHandler = async ({
-  request,
-  matchedFile,
-  handlersCache,
-  db,
-}: {
-  request: Request;
-  matchedFile: MatchedRoute;
-  handlersCache: Map<string, Handler>;
-  db: PersistenceObject;
-}) => {
-  const apiPath = new URL(request.url).pathname;
-  const handler = (await import(matchedFile.filePath)).default as (
-    req: Request,
-    db: PersistenceObject,
-  ) => Promise<Response>;
-  handlersCache.set(`${apiPath}/`, handler);
-  return handler(request, db);
-};
 
 export const createFileSystemBasedRouter = async (db: PersistenceObject) => {
   const defaultEndpointsFsRouter = new FileSystemRouter({
@@ -58,23 +37,27 @@ export const createFileSystemBasedRouter = async (db: PersistenceObject) => {
         return preloadedRequestHandler(request, db);
       }
 
+      const invokeEndpointHandler = async (matchedRoute: MatchedRoute) => {
+        const routeHandler = (await import(matchedRoute.filePath)).default as (
+          req: Request,
+          db: PersistenceObject,
+        ) => Promise<Response>;
+        handlersCache.set(`${apiPath}/`, routeHandler);
+        return routeHandler(request, db);
+      };
+
       const matchedFile = defaultEndpointsFsRouter.match(
         new URL(request.url).pathname.replace('/api', ''),
       );
       if (matchedFile) {
-        return invokeEndpointHandler({ matchedFile, request, db, handlersCache });
+        return invokeEndpointHandler(matchedFile);
       }
 
       const matchedCustomEndpointFile = customEndpointsFsRouter?.match(
         new URL(request.url).pathname.replace('/api', ''),
       );
       if (matchedCustomEndpointFile) {
-        return invokeEndpointHandler({
-          matchedFile: matchedCustomEndpointFile,
-          request,
-          db,
-          handlersCache,
-        });
+        return invokeEndpointHandler(matchedCustomEndpointFile);
       }
 
       return Promise.resolve(

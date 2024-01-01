@@ -2,7 +2,7 @@
   "name": "eiffel-evm-indexer",
   "module": "src/index.ts",
   "type": "module",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "bin": {
     "eiffel-evm-indexer": "./src/cli.ts",
     "eiffel": "./src/cli.ts"
@@ -37,10 +37,10 @@
     "commander": "^11.0.0",
     "graphql": "^16.8.1",
     "graphql-yoga": "^5.0.0",
-    "knex": "^3.0.1",
+    "knex": "^3.1.0",
     "mongodb": "^6.1.0",
     "pg": "^8.11.3",
-    "viem": "^1.15.1",
+    "viem": "^1.21.1",
     "zod": "^3.22.4"
   },
   "trustedDependencies": []
