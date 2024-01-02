@@ -1,4 +1,4 @@
-import { PublicClient, createPublicClient, defineChain, http } from 'viem';
+import { PublicClient, createPublicClient, defineChain, fallback, http } from 'viem';
 import { env } from '../env';
 import { BlockchainClient, EventLog, GetLogsParams } from '../types';
 import { safeAsync } from '../utils/safeAsync';
@@ -30,6 +30,7 @@ export class ViemClient implements BlockchainClient {
   }
 
   protected createPublicClient(): PublicClient {
+    const transports = env.CHAIN_RPC_URLS.map((rpcUrl: string) => http(rpcUrl));
     return createPublicClient({
       chain: defineChain({
         id: env.CHAIN_ID,
@@ -41,15 +42,15 @@ export class ViemClient implements BlockchainClient {
         },
         rpcUrls: {
           default: {
-            http: [env.CHAIN_RPC_URL],
+            http: [env.CHAIN_RPC_URLS[0]],
           },
           public: {
-            http: [env.CHAIN_RPC_URL],
+            http: [env.CHAIN_RPC_URLS[0]],
           },
         },
         network: 'customChain',
       }),
-      transport: http(),
+      transport: fallback(transports, { rank: false }),
     });
   }
 }

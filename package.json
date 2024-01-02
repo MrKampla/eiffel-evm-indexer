@@ -2,7 +2,7 @@
   "name": "eiffel-evm-indexer",
   "module": "src/index.ts",
   "type": "module",
-  "version": "1.2.2",
+  "version": "1.3.0",
   "bin": {
     "eiffel-evm-indexer": "./src/cli.ts",
     "eiffel": "./src/cli.ts"
@@ -13,7 +13,9 @@
   ],
   "exports": {
     ".": "./src/index.ts",
-    "./api": "./src/api/api.ts"
+    "./api": "./src/api/index.ts",
+    "./utils": "./src/utils/index.ts",
+    "./types": "./src/types.ts"
   },
   "scripts": {
     "dev": "bunx concurrently \"bun watch:indexer\"  \"bun watch:api\"",
@@ -27,6 +29,7 @@
   },
   "devDependencies": {
     "@types/bun": "^1.0.0",
+    "@types/node": "^20.10.6",
     "prettier": "^3.0.3"
   },
   "peerDependencies": {

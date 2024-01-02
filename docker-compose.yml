@@ -14,7 +14,7 @@ services:
     command: bunx eiffel indexer
     environment:
       - CHAIN_ID=137
-      - CHAIN_RPC_URL=https://polygon-rpc.com/
+      - CHAIN_RPC_URLS=["https://polygon-rpc.com/"]
       - START_FROM_BLOCK=51309607
       - BLOCK_CONFIRMATIONS=32
       - BLOCK_FETCH_INTERVAL=1000

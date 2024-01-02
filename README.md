@@ -9,16 +9,17 @@ You just have to provide an RPC url (public works too!), chain ID and ABI of a t
 Indexer is easily extendable with custom actions and custom API endpoints. Run your own logic when an
 event is indexed and query the data however you want in your custom API endpoints.
 
-- [How to run](#how-to-run)
-- [Deployment](#deployment)
-  - [ABI Parser Tool](#abi-parser-tool)
-- [Querying data](#querying-data)
-- [Custom API endpoints](#custom-api-endpoints)
-- [Custom event handlers (actions)](#custom-event-handlers-actions)
-  - [Example](#example)
-- [GraphQL (NOT PRODUCTION READY)](#graphql-not-production-ready)
-- [Issues](#issues)
-  - [Knex SQLite connection in Bun is missing bindings](#knex-sqlite-connection-in-bun-is-missing-bindings)
+- [🗼 EIFFEL: Easy Indexer For Frickin EVM Logs](#-eiffel-easy-indexer-for-frickin-evm-logs)
+  - [How to run](#how-to-run)
+  - [Deployment](#deployment)
+    - [ABI Parser Tool](#abi-parser-tool)
+  - [Querying data](#querying-data)
+  - [Custom API endpoints](#custom-api-endpoints)
+  - [Custom event handlers (actions)](#custom-event-handlers-actions)
+    - [Example](#example)
+  - [GraphQL (NOT PRODUCTION READY)](#graphql-not-production-ready)
+  - [Issues](#issues)
+    - [Knex SQLite connection in Bun is missing bindings](#knex-sqlite-connection-in-bun-is-missing-bindings)
 
 ## How to run
 
@@ -72,7 +73,7 @@ In order to run the indexer you don't have to write any code. Every contract can
 
      ```bash
      CHAIN_ID=<number> e.g. 137
-     CHAIN_RPC_URL=<string> e.g. https://polygon-rpc.com/
+     CHAIN_RPC_URLS=<string[]> e.g. ["https://polygon-rpc.com/"]
      START_FROM_BLOCK=<number> e.g. 0 to start from genesis block
      ```
 

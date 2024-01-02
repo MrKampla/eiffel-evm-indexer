@@ -9,8 +9,12 @@ if (!process.env.CHAIN_ID) {
 if (isNaN(+process.env.CHAIN_ID)) {
   throw new Error('CHAIN_ID must be a number');
 }
-if (!process.env.CHAIN_RPC_URL) {
-  throw new Error('CHAIN_RPC_URL not set');
+if (!process.env.CHAIN_RPC_URLS) {
+  throw new Error('CHAIN_RPC_URLS not set');
+}
+const CHAIN_RPC_URLS = JSON.parse(process.env.CHAIN_RPC_URLS) as string[];
+if (!Array.isArray(CHAIN_RPC_URLS) || !CHAIN_RPC_URLS.length) {
+  throw new Error('CHAIN_RPC_URLS is not an array or is empty');
 }
 const targetsPath = path.join(process.cwd(), './targets.json');
 if (!fs.existsSync(targetsPath)) {
@@ -47,7 +51,7 @@ if (process.env.DB_TYPE === 'mongo' && !process.env.DB_NAME?.length) {
 export const env = {
   // REQUIRED
   CHAIN_ID: +process.env.CHAIN_ID,
-  CHAIN_RPC_URL: process.env.CHAIN_RPC_URL,
+  CHAIN_RPC_URLS,
   TARGETS,
   START_FROM_BLOCK: BigInt(process.env.START_FROM_BLOCK),
   // OPTIONAL
