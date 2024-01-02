@@ -12,6 +12,7 @@ event is indexed and query the data however you want in your custom API endpoint
 - [🗼 EIFFEL: Easy Indexer For Frickin EVM Logs](#-eiffel-easy-indexer-for-frickin-evm-logs)
   - [How to run](#how-to-run)
   - [Deployment](#deployment)
+    - [Programmatic start](#programmatic-start)
     - [ABI Parser Tool](#abi-parser-tool)
   - [Querying data](#querying-data)
   - [Custom API endpoints](#custom-api-endpoints)
@@ -114,7 +115,21 @@ In order to run the indexer you don't have to write any code. Every contract can
 
 ## Deployment
 
-You can deploy the indexer to any cloud provider or your own server. However, we suggest to use Docker to deploy the indexer. Example `Dockerfile` and `docker-compose` files are provided in the repository.
+You can deploy the indexer to any cloud provider or your own server. We've prepared example `Dockerfile` and `docker-compose` files in the `./docker` directory.
+
+### Programmatic start
+
+If you need to start the indexer programmatically instead of with an npm script, you can use the `runEiffelIndexer` and `runEiffelApi` functions from `eiffel-evm-indexer` package.
+
+```ts
+import { runEiffelIndexer } from './main';
+import { runEiffelApi } from './api/api';
+
+runEiffelIndexer();
+runEiffelApi();
+```
+
+Also, there's an example in `./docker/dev` directory that copies the `src` directory to the docker image and runs the indexer and API server from source code. This is useful for development and debugging.
 
 ### ABI Parser Tool
 

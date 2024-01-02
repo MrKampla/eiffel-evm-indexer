@@ -34,9 +34,9 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
     propertyName: string,
   ): string;
 
-  abstract queryAll<T>(query: string): Promise<T[]>;
+  abstract queryAll<T>(query: string, options?: { safeAsync: boolean }): Promise<T[]>;
 
-  abstract queryOne<T>(query: string): Promise<T>;
+  abstract queryOne<T>(query: string, options?: { safeAsync: boolean }): Promise<T>;
 
   abstract disconnect(): Promise<void>;
 
@@ -93,7 +93,7 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
       query.offset(offset);
     }
 
-    return this.queryAll<T>(query.toString());
+    return this.queryAll<T>(query.toString(), { safeAsync: false });
   }
 
   protected getSqlOperator(operator: FilterOperators): string | undefined {

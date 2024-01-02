@@ -136,17 +136,19 @@ export class SqlitePersistence extends SqlPersistenceBase {
     return `JSON_EXTRACT(${column}, '$.${propertyName}') `;
   }
 
-  public async queryAll<T>(query: string): Promise<T[]> {
-    return safeAsync(() => {
+  public async queryAll<T>(query: string, options = { safeAsync: true }): Promise<T[]> {
+    const queryFn = async () => {
       logger.log(query);
       return Promise.resolve(this.db.query(query).all() as T[]);
-    });
+    };
+    return options.safeAsync ? safeAsync(queryFn) : queryFn();
   }
 
-  public async queryOne<T>(query: string): Promise<T> {
-    return safeAsync(() => {
+  public async queryOne<T>(query: string, options = { safeAsync: true }): Promise<T> {
+    const queryFn = async () => {
       logger.log(query);
       return Promise.resolve(this.db.query(query).get() as T);
-    });
+    };
+    return options.safeAsync ? safeAsync(queryFn) : queryFn();
   }
 }

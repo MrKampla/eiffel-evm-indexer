@@ -22,7 +22,7 @@ export interface PersistenceObject<UnderlyingDataSource = unknown> {
     offset?: number;
   }): Promise<T[]>;
   getUnderlyingDataSource(): UnderlyingDataSource;
-  queryAll<T>(query: string): Promise<T[]>;
+  queryAll<T>(query: string, options?: { safeAsync: boolean }): Promise<T[]>;
 }
 
 export interface IndexerProps {

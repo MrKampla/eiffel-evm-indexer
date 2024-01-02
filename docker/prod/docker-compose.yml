@@ -9,7 +9,9 @@ services:
     ports:
       - '5432:5432'
   indexer:
-    build: .
+    build:
+      context: ../../
+      dockerfile: ./docker/prod/Dockerfile
     platform: linux/amd64
     command: bunx eiffel indexer
     environment:
@@ -25,7 +27,9 @@ services:
     depends_on:
       - db
   api:
-    build: .
+    build:
+      context: ../../
+      dockerfile: ./docker/prod/Dockerfile
     platform: linux/amd64
     command: bunx eiffel api
     environment:

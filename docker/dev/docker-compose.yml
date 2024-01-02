@@ -1,0 +1,46 @@
+version: '3'
+services:
+  db:
+    image: postgres:16
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=eiffel
+    ports:
+      - '5432:5432'
+  indexer:
+    build:
+      context: ../../
+      dockerfile: ./docker/dev/Dockerfile
+    platform: linux/amd64
+    command: bun src/cli.ts indexer
+    environment:
+      - CHAIN_ID=137
+      - CHAIN_RPC_URLS=["https://polygon-rpc.com/"]
+      - START_FROM_BLOCK=51309607
+      - BLOCK_CONFIRMATIONS=32
+      - BLOCK_FETCH_INTERVAL=1000
+      - BLOCK_FETCH_BATCH_SIZE=1000
+      - REORG_REFETCH_DEPTH=256
+      - DB_TYPE=postgres
+      - DB_URL=postgres://postgres:postgres@db:5432/eiffel
+    depends_on:
+      - db
+  api:
+    build:
+      context: ../../
+      dockerfile: ./docker/dev/Dockerfile
+    platform: linux/amd64
+    command: bun src/cli.ts api
+    environment:
+      - CHAIN_ID=137
+      - DB_TYPE=postgres
+      - DB_URL=postgres://postgres:postgres@db:5432/eiffel
+      - API_PORT=80
+    ports:
+      - '8080:80'
+    depends_on:
+      - db
+
+networks:
+  default:

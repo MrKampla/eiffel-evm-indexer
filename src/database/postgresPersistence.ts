@@ -102,20 +102,23 @@ export class PostgresPersistence extends SqlPersistenceBase {
     return `CAST(${column} AS json)->>'${propertyName}' `;
   }
 
-  public async queryAll<T>(query: string): Promise<T[]> {
-    return safeAsync(async () => {
+  public async queryAll<T>(query: string, options = { safeAsync: true }): Promise<T[]> {
+    const queryFn = async () => {
       logger.log(query);
+
       const items = (await this._knexClient.raw(query)).rows as T[];
       return items;
-    });
+    };
+    return options.safeAsync ? safeAsync(queryFn) : queryFn();
   }
 
-  public async queryOne<T>(query: string): Promise<T> {
-    return safeAsync(async () => {
+  public async queryOne<T>(query: string, options = { safeAsync: true }): Promise<T> {
+    const queryFn = async () => {
       logger.log(query);
       const item = (await this._knexClient.raw(query)).rows[0] as T;
       return item;
-    });
+    };
+    return options.safeAsync ? safeAsync(queryFn) : queryFn();
   }
 
   protected async dropTables(): Promise<void> {
