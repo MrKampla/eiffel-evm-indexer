@@ -66,6 +66,11 @@ export class SqlitePersistence extends SqlPersistenceBase {
     );
   }
 
+  // does not need to use ILIKE because sqlite's LIKE is case-insensitive by default
+  protected doesSupportIlike(): boolean {
+    return false;
+  }
+
   async init() {
     logger.log(`Initializing sqlite instance`);
     await safeAsync(async () =>

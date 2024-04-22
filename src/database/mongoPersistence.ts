@@ -34,7 +34,7 @@ export class MongoDBPersistence implements PersistenceObject {
     table,
     whereClauses = [],
     sortClauses = [],
-    limit = 100,
+    limit,
     offset = 0,
   }: {
     table: string;
@@ -144,6 +144,12 @@ export class MongoDBPersistence implements PersistenceObject {
     switch (whereClause.operator) {
       case FilterOperators.EQ:
         return { [whereClause.field]: { $eq: this.convertValue(whereClause) } };
+      case FilterOperators.EQCI:
+        return {
+          [whereClause.field]: {
+            $eq: new RegExp(`/^${this.convertValue(whereClause)}$/i`),
+          },
+        };
       case FilterOperators.GT:
         return { [whereClause.field]: { $gt: this.convertValue(whereClause) } };
       case FilterOperators.GTE:

@@ -43,7 +43,7 @@ export const filterEventsWithURLParams = async (
       table: collectionName,
       whereClauses: wheres,
       sortClauses: sort,
-      limit: limit ? parseInt(limit) : 100,
+      limit: limit ? parseInt(limit) : undefined,
       offset: offset ? parseInt(offset) : 0,
     })
     .then((res) => ({

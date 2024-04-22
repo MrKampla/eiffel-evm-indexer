@@ -52,6 +52,11 @@ export class PostgresPersistence extends SqlPersistenceBase {
     );
   }
 
+  // Postgres has native support for ILIKE
+  protected doesSupportIlike(): boolean {
+    return true;
+  }
+
   public async saveBatch(
     batch: EventLog[],
     latestBlockNumber?: bigint | undefined,

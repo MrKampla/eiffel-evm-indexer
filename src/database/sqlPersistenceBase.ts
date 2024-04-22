@@ -44,7 +44,7 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
     table,
     whereClauses = [],
     sortClauses = [],
-    limit = 100,
+    limit,
     offset = 0,
   }: {
     table: string;
@@ -96,10 +96,14 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
     return this.queryAll<T>(query.toString(), { safeAsync: false });
   }
 
+  protected abstract doesSupportIlike(): boolean;
+
   protected getSqlOperator(operator: FilterOperators): string | undefined {
     switch (operator) {
       case FilterOperators.EQ:
         return '=';
+      case FilterOperators.EQCI:
+        return this.doesSupportIlike() ? 'ILIKE' : 'LIKE';
       case FilterOperators.GT:
         return '>';
       case FilterOperators.GTE:

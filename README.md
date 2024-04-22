@@ -209,7 +209,7 @@ You can query them with the following API endpoints:
 
 Requests to the `/api/events` endpoint are configurable with following query parameters:
 
-- filters (EQ, LT, LTE, GT, GTE, NEQ)
+- filters (EQ, EQCI (case insensitive equals), LT, LTE, GT, GTE, NEQ)
   - `/api/events?where=address:EQ:0x2791bca1f2de4661ed88a30c99a7a9449aa84174&where=blockNumber:GT:NUM:48358310`
     OR
   - `/api/events?where=address:EQ:0x2791bca1f2de4661ed88a30c99a7a9449aa84174,blockNumber:GT:NUM:48358310`
