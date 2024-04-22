@@ -36,12 +36,14 @@ export class MongoDBPersistence implements PersistenceObject {
     sortClauses = [],
     limit,
     offset = 0,
+    count,
   }: {
     table: string;
     whereClauses: WhereClause[];
     sortClauses: SortClause[];
     limit: number;
     offset: number;
+    count?: boolean;
   }): Promise<T[]> {
     if (!this.db) throw new Error('Database not initialized');
 
@@ -58,6 +60,16 @@ export class MongoDBPersistence implements PersistenceObject {
     );
 
     const collection = this.db?.collection<T>(table);
+    if (count) {
+      const result = await collection.countDocuments(
+        whereClauses?.length ? mongoQuery : {},
+      );
+      return [
+        {
+          'count(*)': result,
+        },
+      ] as unknown as T[];
+    }
     let query = collection.find(whereClauses?.length ? mongoQuery : {});
 
     if (sortClauses?.length) query = query.sort(mongoSort);

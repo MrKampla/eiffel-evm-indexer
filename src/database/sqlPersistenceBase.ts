@@ -46,14 +46,18 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
     sortClauses = [],
     limit,
     offset = 0,
+    count,
   }: {
     table: string;
     whereClauses: WhereClause[];
     sortClauses: SortClause[];
     limit: number;
     offset: number;
+    count?: boolean;
   }): Promise<T[]> {
-    let query = this._knexClient.select('*').from<T>(table);
+    let query = count
+      ? this._knexClient.count('*').from<T>(table)
+      : this._knexClient.select('*').from<T>(table);
 
     for (const clause of whereClauses) {
       const queriedField = clause.field.includes('args')
@@ -70,13 +74,16 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
     }
 
     for (const clause of sortClauses) {
+      if (count) {
+        throw new Error('Cannot sort a count query');
+      }
       const queriedField = clause.field.includes('args')
         ? this.getJsonObjectPropertySqlFragment('args', clause.field.slice(5))
         : `${table}."${clause.field}"`;
       if (clause.type == FilterType.TEXT) {
-        query.orderByRaw(`${queriedField} ${clause.direction}`);
+        (query as Knex.QueryBuilder).orderByRaw(`${queriedField} ${clause.direction}`);
       } else {
-        query.orderByRaw(
+        (query as Knex.QueryBuilder).orderByRaw(
           `${this.castAsNumericWhenRequested(queriedField, clause.type)} ${
             clause.direction
           }`,
@@ -91,8 +98,9 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
     if (offset >= 0) {
       query.offset(offset);
     }
+    const res = await this.queryAll<T>(query.toString(), { safeAsync: false });
 
-    return this.queryAll<T>(query.toString(), { safeAsync: false });
+    return res;
   }
 
   protected abstract doesSupportIlike(): boolean;

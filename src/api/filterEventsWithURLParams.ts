@@ -16,6 +16,7 @@ export const filterEventsWithURLParams = async (
   let wheres: WhereClause[] = [];
   const limit = searchParams.get('limit');
   const offset = searchParams.get('offset');
+  const count = searchParams.has('count');
 
   try {
     wheres = searchParams
@@ -45,6 +46,7 @@ export const filterEventsWithURLParams = async (
       sortClauses: sort,
       limit: limit ? parseInt(limit) : undefined,
       offset: offset ? parseInt(offset) : 0,
+      count,
     })
     .then((res) => ({
       isSuccess: true,

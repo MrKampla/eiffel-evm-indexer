@@ -14,12 +14,14 @@ export interface PersistenceObject<UnderlyingDataSource = unknown> {
     sortClauses,
     limit,
     offset,
+    count,
   }: {
     table: string;
     whereClauses?: WhereClause[];
     sortClauses?: SortClause[];
     limit?: number;
     offset?: number;
+    count?: boolean;
   }): Promise<T[]>;
   getUnderlyingDataSource(): UnderlyingDataSource;
   queryAll<T>(query: string, options?: { safeAsync: boolean }): Promise<T[]>;
