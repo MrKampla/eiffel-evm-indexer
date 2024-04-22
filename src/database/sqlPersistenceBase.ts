@@ -64,8 +64,7 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
           `${this.castAsNumericWhenRequested(
             queriedField,
             clause.type,
-          )} ${this.getSqlOperator(clause.operator)} ?`,
-          [this.convertValue(clause.value, clause.type)],
+          )} ${this.getSqlOperator(clause.operator)} ${this.convertValue(clause)}`,
         ),
       );
     }
@@ -104,6 +103,10 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
         return '=';
       case FilterOperators.EQCI:
         return this.doesSupportIlike() ? 'ILIKE' : 'LIKE';
+      case FilterOperators.IN:
+        return 'IN';
+      case FilterOperators.NOTIN:
+        return 'NOT IN';
       case FilterOperators.GT:
         return '>';
       case FilterOperators.GTE:
@@ -119,10 +122,23 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
     }
   }
 
-  protected convertValue(value: string, type: FilterType): string | number {
+  protected convertValue({
+    value,
+    type,
+    operator,
+  }: {
+    value: string;
+    type: FilterType;
+    operator?: FilterOperators;
+  }): string | number {
+    if (operator === FilterOperators.IN || operator === FilterOperators.NOTIN) {
+      return `(${(
+        value.split('_').map((v) => this.convertValue({ value: v, type })) as string[]
+      ).join(',')})`;
+    }
     switch (type) {
       case FilterType.TEXT:
-        return value;
+        return `'${value}'`;
       case FilterType.NUMBER:
         return parseInt(value);
     }

@@ -14,6 +14,8 @@ export interface SortClause {
 export enum FilterOperators {
   EQ = 'EQ',
   EQCI = 'EQCI', // case-insensitive
+  IN = 'IN',
+  NOTIN = 'NOTIN',
   GT = 'GT',
   GTE = 'GTE',
   LT = 'LT',

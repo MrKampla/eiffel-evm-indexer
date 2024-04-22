@@ -150,6 +150,10 @@ export class MongoDBPersistence implements PersistenceObject {
             $eq: new RegExp(`/^${this.convertValue(whereClause)}$/i`),
           },
         };
+      case FilterOperators.IN:
+        return { [whereClause.field]: { $in: this.convertValue(whereClause) } };
+      case FilterOperators.NOTIN:
+        return { [whereClause.field]: { $nin: this.convertValue(whereClause) } };
       case FilterOperators.GT:
         return { [whereClause.field]: { $gt: this.convertValue(whereClause) } };
       case FilterOperators.GTE:
@@ -165,7 +169,16 @@ export class MongoDBPersistence implements PersistenceObject {
     }
   }
 
-  private convertValue(whereClauses: WhereClause): string | number {
+  private convertValue(whereClauses: WhereClause): string | number | (string | number)[] {
+    if (
+      whereClauses.operator === FilterOperators.IN ||
+      whereClauses.operator === FilterOperators.NOTIN
+    ) {
+      return whereClauses.value.split('_').flatMap((v) =>
+        // filter operator must not be IN or NOTIN in order to avoid infinite recursion
+        this.convertValue({ ...whereClauses, value: v, operator: FilterOperators.EQ }),
+      );
+    }
     return whereClauses.type === FilterType.NUMBER
       ? parseFloat(whereClauses.value)
       : whereClauses.value;
