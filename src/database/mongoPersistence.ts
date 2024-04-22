@@ -34,14 +34,16 @@ export class MongoDBPersistence implements PersistenceObject {
     table,
     whereClauses = [],
     sortClauses = [],
-    limit = 100,
+    limit,
     offset = 0,
+    count,
   }: {
     table: string;
     whereClauses: WhereClause[];
     sortClauses: SortClause[];
     limit: number;
     offset: number;
+    count?: boolean;
   }): Promise<T[]> {
     if (!this.db) throw new Error('Database not initialized');
 
@@ -58,6 +60,16 @@ export class MongoDBPersistence implements PersistenceObject {
     );
 
     const collection = this.db?.collection<T>(table);
+    if (count) {
+      const result = await collection.countDocuments(
+        whereClauses?.length ? mongoQuery : {},
+      );
+      return [
+        {
+          'count(*)': result,
+        },
+      ] as unknown as T[];
+    }
     let query = collection.find(whereClauses?.length ? mongoQuery : {});
 
     if (sortClauses?.length) query = query.sort(mongoSort);
@@ -144,6 +156,16 @@ export class MongoDBPersistence implements PersistenceObject {
     switch (whereClause.operator) {
       case FilterOperators.EQ:
         return { [whereClause.field]: { $eq: this.convertValue(whereClause) } };
+      case FilterOperators.EQCI:
+        return {
+          [whereClause.field]: {
+            $eq: new RegExp(`/^${this.convertValue(whereClause)}$/i`),
+          },
+        };
+      case FilterOperators.IN:
+        return { [whereClause.field]: { $in: this.convertValue(whereClause) } };
+      case FilterOperators.NOTIN:
+        return { [whereClause.field]: { $nin: this.convertValue(whereClause) } };
       case FilterOperators.GT:
         return { [whereClause.field]: { $gt: this.convertValue(whereClause) } };
       case FilterOperators.GTE:
@@ -159,7 +181,16 @@ export class MongoDBPersistence implements PersistenceObject {
     }
   }
 
-  private convertValue(whereClauses: WhereClause): string | number {
+  private convertValue(whereClauses: WhereClause): string | number | (string | number)[] {
+    if (
+      whereClauses.operator === FilterOperators.IN ||
+      whereClauses.operator === FilterOperators.NOTIN
+    ) {
+      return whereClauses.value.split('_').flatMap((v) =>
+        // filter operator must not be IN or NOTIN in order to avoid infinite recursion
+        this.convertValue({ ...whereClauses, value: v, operator: FilterOperators.EQ }),
+      );
+    }
     return whereClauses.type === FilterType.NUMBER
       ? parseFloat(whereClauses.value)
       : whereClauses.value;

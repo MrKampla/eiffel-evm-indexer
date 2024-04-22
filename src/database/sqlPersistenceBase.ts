@@ -44,16 +44,20 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
     table,
     whereClauses = [],
     sortClauses = [],
-    limit = 100,
+    limit,
     offset = 0,
+    count,
   }: {
     table: string;
     whereClauses: WhereClause[];
     sortClauses: SortClause[];
     limit: number;
     offset: number;
+    count?: boolean;
   }): Promise<T[]> {
-    let query = this._knexClient.select('*').from<T>(table);
+    let query = count
+      ? this._knexClient.count('*').from<T>(table)
+      : this._knexClient.select('*').from<T>(table);
 
     for (const clause of whereClauses) {
       const queriedField = clause.field.includes('args')
@@ -64,20 +68,22 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
           `${this.castAsNumericWhenRequested(
             queriedField,
             clause.type,
-          )} ${this.getSqlOperator(clause.operator)} ?`,
-          [this.convertValue(clause.value, clause.type)],
+          )} ${this.getSqlOperator(clause.operator)} ${this.convertValue(clause)}`,
         ),
       );
     }
 
     for (const clause of sortClauses) {
+      if (count) {
+        throw new Error('Cannot sort a count query');
+      }
       const queriedField = clause.field.includes('args')
         ? this.getJsonObjectPropertySqlFragment('args', clause.field.slice(5))
         : `${table}."${clause.field}"`;
       if (clause.type == FilterType.TEXT) {
-        query.orderByRaw(`${queriedField} ${clause.direction}`);
+        (query as Knex.QueryBuilder).orderByRaw(`${queriedField} ${clause.direction}`);
       } else {
-        query.orderByRaw(
+        (query as Knex.QueryBuilder).orderByRaw(
           `${this.castAsNumericWhenRequested(queriedField, clause.type)} ${
             clause.direction
           }`,
@@ -92,14 +98,23 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
     if (offset >= 0) {
       query.offset(offset);
     }
+    const res = await this.queryAll<T>(query.toString(), { safeAsync: false });
 
-    return this.queryAll<T>(query.toString(), { safeAsync: false });
+    return res;
   }
+
+  protected abstract doesSupportIlike(): boolean;
 
   protected getSqlOperator(operator: FilterOperators): string | undefined {
     switch (operator) {
       case FilterOperators.EQ:
         return '=';
+      case FilterOperators.EQCI:
+        return this.doesSupportIlike() ? 'ILIKE' : 'LIKE';
+      case FilterOperators.IN:
+        return 'IN';
+      case FilterOperators.NOTIN:
+        return 'NOT IN';
       case FilterOperators.GT:
         return '>';
       case FilterOperators.GTE:
@@ -115,10 +130,23 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
     }
   }
 
-  protected convertValue(value: string, type: FilterType): string | number {
+  protected convertValue({
+    value,
+    type,
+    operator,
+  }: {
+    value: string;
+    type: FilterType;
+    operator?: FilterOperators;
+  }): string | number {
+    if (operator === FilterOperators.IN || operator === FilterOperators.NOTIN) {
+      return `(${(
+        value.split('_').map((v) => this.convertValue({ value: v, type })) as string[]
+      ).join(',')})`;
+    }
     switch (type) {
       case FilterType.TEXT:
-        return value;
+        return `'${value}'`;
       case FilterType.NUMBER:
         return parseInt(value);
     }

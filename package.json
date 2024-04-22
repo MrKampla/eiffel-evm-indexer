@@ -2,7 +2,7 @@
   "name": "eiffel-evm-indexer",
   "module": "src/index.ts",
   "type": "module",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "bin": {
     "eiffel-evm-indexer": "./src/cli.ts",
     "eiffel": "./src/cli.ts"
@@ -30,7 +30,7 @@
     "docker:prod": "docker compose -f ./docker/prod/docker-compose.yml up --build"
   },
   "devDependencies": {
-    "@types/bun": "^1.0.0",
+    "@types/bun": "^1.1.0",
     "@types/node": "^20.10.6",
     "prettier": "^3.0.3"
   },

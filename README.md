@@ -15,6 +15,10 @@ event is indexed and query the data however you want in your custom API endpoint
     - [Programmatic start](#programmatic-start)
     - [ABI Parser Tool](#abi-parser-tool)
   - [Querying data](#querying-data)
+    - [Filters (EQ, EQCI (case insensitive equals), LT, LTE, GT, GTE, NEQ, IN, NOTIN)](#filters-eq-eqci-case-insensitive-equals-lt-lte-gt-gte-neq-in-notin)
+    - [Pagination (limit, offset)](#pagination-limit-offset)
+    - [Sorting (numeric sorting and text sorting) over top level fields or event arguments (asc, desc)](#sorting-numeric-sorting-and-text-sorting-over-top-level-fields-or-event-arguments-asc-desc)
+    - [Counting](#counting)
   - [Custom API endpoints](#custom-api-endpoints)
   - [Custom event handlers (actions)](#custom-event-handlers-actions)
     - [Example](#example)
@@ -209,19 +213,30 @@ You can query them with the following API endpoints:
 
 Requests to the `/api/events` endpoint are configurable with following query parameters:
 
-- filters (EQ, LT, LTE, GT, GTE, NEQ)
-  - `/api/events?where=address:EQ:0x2791bca1f2de4661ed88a30c99a7a9449aa84174&where=blockNumber:GT:NUM:48358310`
-    OR
-  - `/api/events?where=address:EQ:0x2791bca1f2de4661ed88a30c99a7a9449aa84174,blockNumber:GT:NUM:48358310`
-    OR
-  - `/api/events?where=args_from:NEQ:0x25aB3Efd52e6470681CE037cD546Dc60726948D3,args_value:EQ:1053362095,blockNumber:GT:NUM:48358310`
-- pagination (limit, offset)
-  - `/api/events?limit=10&offset=10`
-- sorting (numeric sorting and text sorting) over top level fields or event arguments (asc, desc)
-  - `/api/events?sort=address:ASC`
-  - `/api/events?sort=blockNumber:NUM:ASC`
-  - `/api/events?sort=args_from:DESC`
-  - `/api/events?sort=args_value:NUM:DESC`
+### Filters (EQ, EQCI (case insensitive equals), LT, LTE, GT, GTE, NEQ, IN, NOTIN)
+
+- `/api/events?where=address:EQ:0x2791bca1f2de4661ed88a30c99a7a9449aa84174&where=blockNumber:GT:NUM:48358310` => queries for a specific address and block number greater than specified number
+- `/api/events?where=address:EQ:0x2791bca1f2de4661ed88a30c99a7a9449aa84174,blockNumber:GT:NUM:48358310`
+- `/api/events?where=args_from:NEQ:0x25aB3Efd52e6470681CE037cD546Dc60726948D3,args_value:EQ:1053362095,blockNumber:GT:NUM:48358310` => queries
+- `/api/events?where=blockNumber:IN:NUM:1_2_3_4` => queries for block numbers 1, 2, 3 and 4
+- `/api/events?where=blockNumber:NOTIN:NUM:1_2_3_4` => queries for block numbers that are not 1, 2, 3 or 4
+- `/api/events?where=address:EQCI:0x2791bca1f2de4661ed88a30c99a7a9449aa84174` => case insensitive equals
+
+### Pagination (limit, offset)
+
+- `/api/events?limit=10&offset=10`
+
+### Sorting (numeric sorting and text sorting) over top level fields or event arguments (asc, desc)
+
+- `/api/events?sort=address:ASC`
+- `/api/events?sort=blockNumber:NUM:ASC`
+- `/api/events?sort=args_from:DESC`
+- `/api/events?sort=args_value:NUM:DESC`
+
+### Counting
+
+- `/api/events?count` - returns the count of all events that match the query
+- `/api/events?where=blockNumber:LT:1337&count` - returns the count of all events that match the query
 
 There are two types of comparison: text and numeric. By default all values are compared by text. If you want to compare by number, then you have to specify the type of the field in the query parameter. For example, if you want to sort by block number, then you have to specify that it is a numeric field: `sort=blockNumber:NUM:ASC`. This also works for `where` filters e.g. `where=blockNumber:GT:NUM:48358310`.
 
