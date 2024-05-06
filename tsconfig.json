@@ -5,8 +5,9 @@
     "target": "esnext",
     "moduleResolution": "bundler",
     "moduleDetection": "force",
-    "allowImportingTsExtensions": true,
-    "noEmit": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "noEmit": false,
     "composite": true,
     "strict": true,
     "downlevelIteration": true,
@@ -18,7 +19,10 @@
     "types": [
       "@types/bun", // add Bun global
       "@types/node"
-    ]
+    ],
+    "outDir": "dist",
+    "emitDeclarationOnly": true,
+    "baseUrl": "./src"
   },
   "include": ["./src/**/*", "./package.json"]
 }

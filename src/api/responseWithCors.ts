@@ -1,14 +1,15 @@
+import { OutgoingHttpHeaders } from 'node:http';
 const CORS_HEADERS = {
   headers: {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'OPTIONS, POST',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Content-Type': 'application/json',
-  },
-};
+    'access-control-allow-origin': '*',
+    'access-control-allow-methods': 'OPTIONS, POST',
+    'access-control-allow-headers': 'Content-Type',
+    'content-type': 'application/json',
+  } as OutgoingHttpHeaders,
+} as const;
 
 export class ResponseWithCors extends Response {
   constructor(body: string, init?: ResponseInit) {
-    super(body, { ...CORS_HEADERS, ...init });
+    super(body, { ...CORS_HEADERS, ...(init as any) });
   }
 }

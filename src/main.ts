@@ -4,6 +4,7 @@ import { ViemClient } from './rpcClient/viemClient';
 import { PersistenceObject } from './types';
 import { getDb } from './utils/getDb';
 import { env } from './env';
+import isEsMain from 'es-main';
 
 export const runEiffelIndexer = async () => {
   const viemClient = new ViemClient();
@@ -20,6 +21,6 @@ export const runEiffelIndexer = async () => {
   new Indexer(db, viemEventsFetcher, viemClient).run();
 };
 
-if (import.meta.main) {
+if (isEsMain(import.meta)) {
   await runEiffelIndexer();
 }

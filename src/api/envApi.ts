@@ -1,4 +1,6 @@
 // TODO: code duplication with indexer validation
+import { config } from 'dotenv';
+config();
 
 if (!process.env.CHAIN_ID) {
   throw new Error('CHAIN_ID not set');

@@ -30,10 +30,12 @@ event is indexed and query the data however you want in your custom API endpoint
 
 In order to run the indexer you don't have to write any code. Every contract can be indexed just by providing a contract ABI and a target address. This indexer comes with an ABI parser CLI tool that can be used to generate a list of targets for indexer.
 
-1. Install [Bun](https://bun.sh) runtime and create a repo with `bun init`.
+1. Install [Node](https://nodejs.org) or [Bun](https://bun.sh) runtime and create a new repo.
 2. Install eiffel-evm-indexer npm package:
 
    ```bash
+   npm i eiffel-evm-indexer
+    # or
    bun i eiffel-evm-indexer
    ```
 
@@ -109,8 +111,15 @@ In order to run the indexer you don't have to write any code. Every contract can
 
    ```bash
     # start both indexer and API server in a single process
-    bunx eiffel
+    npx eiffel # if you use NPM
+    bunx eiffel # if you use Bun
+
     # or start indexer and API server separately
+    # if you use NPM
+    npx eiffel indexer
+    npx eiffel api
+
+    # if you use Bun
     bunx eiffel indexer
     bunx eiffel api
    ```
@@ -249,13 +258,14 @@ You can create your own API endpoints by adding request handlers by creating a `
 Request handler file has to `export default` a function with the following signature:
 
 ```ts
-(request: Request, db: PersistenceObject) => Promise<ResponseWithCors>;
+(request: Request, db: PersistenceObject) => Promise<ResponseWithCors | {}>;
 ```
 
-example `./endpoints/custom-endpoint.ts`:
+Where `Request` is a standard request object from the `http` module, `db` is a database object that you can use to query the database and the return type is either `ResponseWithCors` (which is a standard response object with CORS headers) or any JSON serializable object.
+
+Example `./endpoints/custom-endpoint.ts`:
 
 ```ts
-import { ResponseWithCors } from '../../responseWithCors';
 import { SqlPersistenceBase } from '../../../database/sqlPersistenceBase';
 
 // You have access to the db and the request object.
@@ -274,11 +284,9 @@ export default async (request: Request, db: SqlPersistenceBase) => {
     )
   ).result;
 
-  return new ResponseWithCors(
-    JSON.stringify({
-      result,
-    }),
-  );
+  return {
+    result,
+  };
 };
 ```
 
@@ -386,12 +394,8 @@ import { ResponseWithCors } from '../../responseWithCors';
 import { SqlPersistenceBase } from '../../../database/sqlPersistenceBase';
 
 export default async (_request: Request, db: SqlPersistenceBase) => {
-  return new ResponseWithCors(
-    JSON.stringify(
-      await db.queryAll(
-        db.getUnderlyingDataSource().select().from('unfilled_orders').toQuery(),
-      ),
-    ),
+  return await db.queryAll(
+    db.getUnderlyingDataSource().select().from('unfilled_orders').toQuery(),
   );
 };
 ```

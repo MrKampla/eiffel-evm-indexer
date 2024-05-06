@@ -1,9 +1,10 @@
-import { Knex, knex } from 'knex';
+import knexPkg, { Knex } from 'knex';
+const { knex } = knexPkg;
 import { EventLog, PersistenceObject } from '../types';
 import { FilterOperators, FilterType, SortClause, WhereClause } from './filters';
 
 export abstract class SqlPersistenceBase implements PersistenceObject {
-  protected readonly _knexClient: knex.Knex;
+  protected readonly _knexClient: Knex;
 
   constructor(client: 'pg' | 'better-sqlite3', dbUrl: string, dbSsl: boolean) {
     this._knexClient = knex({
