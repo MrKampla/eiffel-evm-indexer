@@ -37,7 +37,7 @@
     "postbuild": "pnpm run tsc",
     "tsc": "tsc",
     "posttsc": "cp -r dist/src/ dist/ && rm -rf dist/src",
-    "prepublishOnly": "pnpm run build && pnpm run tsc",
+    "prepublishOnly": "pnpm run build",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
