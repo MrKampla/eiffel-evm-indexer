@@ -21,7 +21,6 @@
       "@types/node"
     ],
     "outDir": "dist",
-    "emitDeclarationOnly": true,
     "baseUrl": "./src"
   },
   "include": ["./src/**/*", "./package.json"]
