@@ -1,4 +1,4 @@
-import { env } from '../envApi';
+import { getApiEnv } from '../envApi';
 import { IndexingStatus, PersistenceObject } from '../../types';
 import { ResponseWithCors } from '../responseWithCors';
 import { FilterOperators, FilterType } from '../../database/filters';
@@ -11,7 +11,7 @@ export default async (_request: Request, db: PersistenceObject) => {
         field: 'chainId',
         operator: FilterOperators.EQ,
         type: FilterType.TEXT,
-        value: env.CHAIN_ID.toString(),
+        value: getApiEnv().CHAIN_ID.toString(),
       },
     ],
     sortClauses: [],

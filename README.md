@@ -13,7 +13,6 @@ event is indexed and query the data however you want in your custom API endpoint
   - [How to run](#how-to-run)
   - [Deployment](#deployment)
     - [Programmatic start](#programmatic-start)
-    - [ABI Parser Tool](#abi-parser-tool)
   - [Querying data](#querying-data)
     - [Filters (EQ, EQCI (case insensitive equals), LT, LTE, GT, GTE, NEQ, IN, NOTIN)](#filters-eq-eqci-case-insensitive-equals-lt-lte-gt-gte-neq-in-notin)
     - [Pagination (limit, offset)](#pagination-limit-offset)
@@ -130,6 +129,8 @@ In order to run the indexer you don't have to write any code. Every contract can
 
 You can deploy the indexer to any cloud provider or your own server. We've prepared example `Dockerfile` and `docker-compose` files in the `./docker` directory.
 
+The `./docker/dev` directory example copies the `src` directory to the docker image and runs the indexer and API server from source code with Bun. This is useful for development and debugging.
+
 ### Programmatic start
 
 If you need to start the indexer programmatically instead of with an npm script, you can use the `runEiffelIndexer` and `runEiffelApi` functions from `eiffel-evm-indexer` package.
@@ -142,7 +143,43 @@ runEiffelIndexer();
 runEiffelApi();
 ```
 
-Also, there's an example in `./docker/dev` directory that copies the `src` directory to the docker image and runs the indexer and API server from source code. This is useful for development and debugging.
+You can also override env variables by passing them as an argument to the function:
+
+```ts
+runEiffelIndexer({
+  CHAIN_ID: 137,
+  CHAIN_RPC_URLS: ['https://polygon-rpc.com/'],
+  START_FROM_BLOCK: 0,
+  BLOCK_CONFIRMATIONS: 5,
+  BLOCK_FETCH_INTERVAL: 1000,
+  BLOCK_FETCH_BATCH_SIZE: 1000,
+  DB_TYPE: 'sqlite',
+  DB_URL: 'events.db',
+  CLEAR_DB: false,
+  REORG_REFETCH_DEPTH: 0,
+});
+runEiffelApi({
+  CHAIN_ID: 137,
+  API_PORT: 8080,
+  DB_TYPE: 'sqlite',
+  DB_URL: 'events.db',
+});
+```
+
+Both `runEiffelIndexer` and `runEiffelApi` functions return an event emitter that emits an event when the given service is started. `runEiffelIndexer` emits `indexing` event and `runEiffelApi` emits `listening` event. You can listen to these events by using the `on` method:
+
+```ts
+const indexer = await runEiffelIndexer();
+const api = await runEiffelApi();
+indexer.on('indexing', () => {
+  console.log('Indexer started');
+});
+api.on('listening', () => {
+  console.log('API server started');
+});
+```
+
+````ts
 
 ### ABI Parser Tool
 
@@ -152,7 +189,7 @@ Eiffel comes with an ABI parser tool that can be used to generate a list of targ
 
 ```bash
 eiffel create:targets -a <path to ABI file> -e <event names to index separated by space>
-```
+````
 
 example:
 

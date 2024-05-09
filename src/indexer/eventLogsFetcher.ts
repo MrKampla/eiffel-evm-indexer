@@ -5,7 +5,7 @@ import {
   GetEventsBatchParam,
 } from '../types';
 import { BIGINT_MATH } from '../utils/bigIntMath';
-import { env } from '../env';
+import { getEnv } from '../env';
 import { setTimeout } from 'node:timers/promises';
 import { logger } from '../utils/logger';
 
@@ -13,10 +13,10 @@ export class EventLogsFetcher implements EventsFetcher {
   constructor(private publicClient: BlockchainClient) {}
 
   async *getEventsBatch({
-    batchSize = env.BLOCK_FETCH_BATCH_SIZE,
+    batchSize = getEnv().BLOCK_FETCH_BATCH_SIZE,
     start = 0n,
     end = 0n, // if end is 0, indexer will run indefinitely
-    reorgDepth = env.REORG_REFETCH_DEPTH,
+    reorgDepth = getEnv().REORG_REFETCH_DEPTH,
     targets,
   }: GetEventsBatchParam) {
     let currentBlock = start;
@@ -28,7 +28,7 @@ export class EventLogsFetcher implements EventsFetcher {
       if (toBlock === currentBlock || currentBlock > toBlock) {
         if (reorgDepth === 0n) {
           logger.log('Waiting for new blocks...');
-          await setTimeout(env.BLOCK_FETCH_INTERVAL);
+          await setTimeout(getEnv().BLOCK_FETCH_INTERVAL);
           continue;
         }
 
@@ -37,7 +37,7 @@ export class EventLogsFetcher implements EventsFetcher {
         );
         currentBlock =
           latestBlockNumber > reorgDepth ? latestBlockNumber - reorgDepth : 0n;
-        await setTimeout(env.BLOCK_FETCH_INTERVAL);
+        await setTimeout(getEnv().BLOCK_FETCH_INTERVAL);
       }
 
       logger.log(`Fetching from ${currentBlock} to ${toBlock}`);

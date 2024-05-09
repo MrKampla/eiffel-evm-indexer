@@ -38,11 +38,17 @@
     "tsc": "tsc",
     "posttsc": "cp -r dist/src/ dist/ && rm -rf dist/src",
     "prepublishOnly": "pnpm run build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test ./tests/*.ts"
   },
   "devDependencies": {
+    "@testcontainers/mongodb": "^10.9.0",
+    "@testcontainers/postgresql": "^10.9.0",
     "@types/bun": "^1.1.1",
+    "@types/chai": "^4.3.16",
     "@types/node": "^20.10.6",
+    "chai": "^5.1.0",
+    "hardhat": "^2.22.3",
     "prettier": "^3.0.3",
     "tsup": "^8.0.2",
     "tsx": "^4.8.2"
@@ -62,8 +68,9 @@
     "knex": "^3.1.0",
     "mongodb": "^6.1.0",
     "pg": "^8.11.3",
+    "testcontainers": "^10.9.0",
     "viem": "^2.9.32",
-    "zod": "^3.22.4"
+    "zod": "^3.23.6"
   },
   "trustedDependencies": []
 }

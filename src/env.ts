@@ -3,29 +3,56 @@ import { z } from 'zod';
 import fs from 'node:fs';
 import path from 'node:path';
 import { config } from 'dotenv';
-config();
 
-if (!process.env.CHAIN_ID) {
-  throw new Error('CHAIN_ID not set');
-}
-if (isNaN(+process.env.CHAIN_ID)) {
-  throw new Error('CHAIN_ID must be a number');
-}
-if (!process.env.CHAIN_RPC_URLS) {
-  throw new Error('CHAIN_RPC_URLS not set');
-}
-const CHAIN_RPC_URLS = JSON.parse(process.env.CHAIN_RPC_URLS) as string[];
-if (!Array.isArray(CHAIN_RPC_URLS) || !CHAIN_RPC_URLS.length) {
-  throw new Error('CHAIN_RPC_URLS is not an array or is empty');
-}
-const targetsPath = path.join(process.cwd(), './targets.json');
-if (!fs.existsSync(targetsPath)) {
-  throw new Error(
-    `No TARGETS configured: create targets.json at ${path.dirname(targetsPath)}`,
-  );
-}
-const TARGETS = JSON.parse(fs.readFileSync(targetsPath).toString()) as IndexerTarget[];
-if (TARGETS) {
+export const EnvSchema = z.object({
+  // REQUIRED
+  CHAIN_ID: z.number(),
+  CHAIN_RPC_URLS: z.array(z.string()).min(1),
+  TARGETS: z.array(
+    z.object({
+      address: z.string().startsWith('0x'),
+      abiItem: z.object({
+        type: z.enum(['event']),
+      }),
+    }),
+  ),
+  START_FROM_BLOCK: z.bigint(),
+  // OPTIONAL
+  BLOCK_CONFIRMATIONS: z.bigint().optional().default(5n),
+  BLOCK_FETCH_INTERVAL: z.number().optional().default(1000),
+  BLOCK_FETCH_BATCH_SIZE: z.bigint().optional().default(1000n),
+  DB_TYPE: z.enum(['sqlite', 'postgres', 'mongo']).optional().default('sqlite'),
+  DB_URL: z.string().optional().default('events.db'),
+  DB_SSL: z.boolean().optional().default(true),
+  CLEAR_DB: z.boolean().optional().default(true),
+  DB_NAME: z.string().optional(),
+  REORG_REFETCH_DEPTH: z.bigint().optional().default(0n),
+});
+
+export type Env = z.infer<typeof EnvSchema> & {
+  TARGETS: IndexerTarget[];
+};
+
+const getTargets = (overrides: Partial<Env> = {}) => {
+  if (overrides.TARGETS) {
+    const targetSchema = z.array(
+      z.object({
+        address: z.string(),
+        abiItem: z.object({
+          type: z.enum(['event']),
+        }),
+      }),
+    );
+    return targetSchema.parse(overrides.TARGETS);
+  }
+
+  const targetsPath = path.join(process.cwd(), './targets.json');
+  if (!fs.existsSync(targetsPath)) {
+    throw new Error(
+      `No TARGETS configured: create targets.json at ${path.dirname(targetsPath)}`,
+    );
+  }
+  const TARGETS = JSON.parse(fs.readFileSync(targetsPath).toString()) as IndexerTarget[];
   const targetSchema = z.array(
     z.object({
       address: z.string(),
@@ -34,36 +61,49 @@ if (TARGETS) {
       }),
     }),
   );
-  targetSchema.parse(TARGETS);
-}
-if (!process.env.START_FROM_BLOCK) {
-  throw new Error('START_FROM_BLOCK not set');
-}
-if (![undefined, 'sqlite', 'postgres', 'mongo'].includes(process.env.DB_TYPE)) {
-  throw new Error('DB_TYPE is only allowed to be "sqlite", "postgres" or "mongo"');
-}
-if (process.env.DB_TYPE === 'postgres' && !process.env.DB_URL) {
-  throw new Error('postgres DB_URL not set');
-}
+  return targetSchema.parse(TARGETS);
+};
 
-if (process.env.DB_TYPE === 'mongo' && !process.env.DB_NAME?.length) {
-  throw new Error('mogno DB_NAME is not set');
-}
+let cachedEnv: Env;
 
-export const env = {
-  // REQUIRED
-  CHAIN_ID: +process.env.CHAIN_ID,
-  CHAIN_RPC_URLS,
-  TARGETS,
-  START_FROM_BLOCK: BigInt(process.env.START_FROM_BLOCK),
-  // OPTIONAL
-  BLOCK_CONFIRMATIONS: BigInt(process.env.BLOCK_CONFIRMATIONS || 5n),
-  BLOCK_FETCH_INTERVAL: +(process.env.BLOCK_FETCH_INTERVAL || 1000),
-  BLOCK_FETCH_BATCH_SIZE: BigInt(process.env.BLOCK_FETCH_BATCH_SIZE || 1000n),
-  DB_TYPE: process.env.DB_TYPE || 'sqlite',
-  DB_URL: process.env.DB_URL || 'events.db',
-  DB_SSL: process.env.DB_SSL === 'true',
-  CLEAR_DB: process.env.CLEAR_DB === 'true',
-  DB_NAME: process.env.DB_NAME,
-  REORG_REFETCH_DEPTH: BigInt(process.env.REORG_REFETCH_DEPTH || 0n),
-} as const;
+/**
+ * First checks if the env is already cached, if it is then it is returned. If env is not cached, it reads the env variables
+ * from the .env file and the targets.json file and also overrides passed by the user (only when running programatically,
+ * not in the CLI) and returns the env object.
+ * @param overrides - Optional object to override the env variables
+ * @returns The env object
+ */
+export const getEnv = (overrides: Partial<Env> = {}): Env => {
+  if (cachedEnv) {
+    return cachedEnv;
+  }
+
+  config();
+
+  const env = EnvSchema.parse({
+    ...process.env,
+    CHAIN_RPC_URLS:
+      overrides.CHAIN_RPC_URLS ?? JSON.parse(process.env.CHAIN_RPC_URLS as string),
+    START_FROM_BLOCK: overrides.START_FROM_BLOCK ?? BigInt(process.env.START_FROM_BLOCK!),
+    BLOCK_CONFIRMATIONS:
+      overrides.BLOCK_CONFIRMATIONS ?? BigInt(process.env.BLOCK_CONFIRMATIONS!),
+    BLOCK_FETCH_INTERVAL:
+      overrides.BLOCK_FETCH_INTERVAL ?? Number(process.env.BLOCK_FETCH_INTERVAL),
+    BLOCK_FETCH_BATCH_SIZE:
+      overrides.BLOCK_FETCH_BATCH_SIZE ?? BigInt(process.env.BLOCK_FETCH_BATCH_SIZE!),
+    ...overrides,
+    TARGETS: getTargets(overrides),
+  });
+
+  if (process.env.DB_TYPE === 'postgres' && !process.env.DB_URL) {
+    throw new Error('postgres DB_URL not set');
+  }
+
+  if (process.env.DB_TYPE === 'mongo' && !process.env.DB_NAME?.length) {
+    throw new Error('mogno DB_NAME is not set');
+  }
+
+  cachedEnv = env as Env;
+
+  return cachedEnv;
+};

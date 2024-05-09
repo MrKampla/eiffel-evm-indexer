@@ -21,7 +21,7 @@
       "@types/node"
     ],
     "outDir": "dist",
-    "baseUrl": "./src"
+    "baseUrl": "."
   },
-  "include": ["./src/**/*", "./package.json"]
+  "include": ["./src/**/*", "./package.json", "tests"]
 }

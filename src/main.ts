@@ -3,12 +3,13 @@ import { Indexer } from './indexer';
 import { ViemClient } from './rpcClient/viemClient';
 import { PersistenceObject } from './types';
 import { getDb } from './utils/getDb';
-import { env } from './env';
 import isEsMain from 'es-main';
+import { Env, getEnv } from './env';
 
-export const runEiffelIndexer = async () => {
+export const runEiffelIndexer = async (props: Partial<Env> = {}) => {
   const viemClient = new ViemClient();
   const viemEventsFetcher = new EventLogsFetcher(viemClient);
+  const env = getEnv(props);
   const db: PersistenceObject = getDb({
     dbType: env.DB_TYPE,
     dbUrl: env.DB_URL,
@@ -18,7 +19,11 @@ export const runEiffelIndexer = async () => {
     dbName: env.DB_NAME,
   });
 
-  new Indexer(db, viemEventsFetcher, viemClient).run();
+  const indexer = new Indexer(db, viemEventsFetcher, viemClient);
+
+  setImmediate(() => indexer.run());
+
+  return indexer.eventEmitter;
 };
 
 if (isEsMain(import.meta)) {

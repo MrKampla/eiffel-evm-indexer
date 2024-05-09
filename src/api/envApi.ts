@@ -1,31 +1,54 @@
-// TODO: code duplication with indexer validation
+import { z } from 'zod';
 import { config } from 'dotenv';
-config();
 
-if (!process.env.CHAIN_ID) {
-  throw new Error('CHAIN_ID not set');
-}
-if (isNaN(+process.env.CHAIN_ID)) {
-  throw new Error('CHAIN_ID must be a number');
-}
+export const ApiEnvSchema = z.object({
+  // REQUIRED
+  CHAIN_ID: z.number(),
+  // OPTIONAL
+  API_PORT: z.number().optional().default(8080),
+  DB_TYPE: z.enum(['sqlite', 'postgres', 'mongo']).optional().default('sqlite'),
+  DB_URL: z.string().optional().default('events.db'),
+  DB_SSL: z.boolean().optional().default(true),
+  GPAPHQL: z.boolean().optional().default(false),
+  DB_NAME: z.string().optional(),
+});
 
-if (![undefined, 'sqlite', 'postgres', 'mongo'].includes(process.env.DB_TYPE)) {
-  throw new Error('DB_TYPE is only allowed to be "sqlite", "postgres" or "mongo"');
-}
-if (process.env.DB_TYPE === 'postgres' && !process.env.DB_URL) {
-  throw new Error('postgres DB_URL not set');
-}
+export type ApiEnv = z.infer<typeof ApiEnvSchema>;
 
-if (process.env.DB_TYPE === 'mongo' && !process.env.DB_NAME?.length) {
-  throw new Error('mogno DB_NAME is not set');
-}
+let cachedEnv: ApiEnv;
 
-export const env = {
-  CHAIN_ID: +process.env.CHAIN_ID,
-  API_PORT: +(process.env.API_PORT || 8080),
-  DB_TYPE: process.env.DB_TYPE || 'sqlite',
-  DB_URL: process.env.DB_URL || 'events.db',
-  DB_SSL: process.env.DB_SSL === 'true',
-  GPAPHQL: process.env.GPAPHQL === 'true',
-  DB_NAME: process.env.DB_NAME,
-} as const;
+/**
+ * First checks if the env is already cached, if it is then it is returned. If env is not cached, it reads the env variables
+ * from the .env file and the targets.json file and also overrides passed by the user (only when running programatically,
+ * not in the CLI) and returns the env object.
+ * @param overrides - Optional object to override the env variables
+ * @returns The env object
+ */
+export const getApiEnv = (overrides: Partial<ApiEnv> = {}): ApiEnv => {
+  if (cachedEnv) {
+    return cachedEnv;
+  }
+
+  config();
+
+  const env = ApiEnvSchema.parse({
+    ...process.env,
+    CHAIN_ID: Number(process.env.CHAIN_ID),
+    API_PORT: Number(process.env.API_PORT),
+    DB_SSL: process.env.DB_SSL === 'true',
+    GRAPHQL: process.env.GPAPHQL === 'true',
+    ...overrides,
+  });
+
+  if (process.env.DB_TYPE === 'postgres' && !process.env.DB_URL) {
+    throw new Error('postgres DB_URL not set');
+  }
+
+  if (process.env.DB_TYPE === 'mongo' && !process.env.DB_NAME?.length) {
+    throw new Error('mogno DB_NAME is not set');
+  }
+
+  cachedEnv = env as ApiEnv;
+
+  return cachedEnv;
+};

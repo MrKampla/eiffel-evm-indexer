@@ -19,7 +19,9 @@ export class MongoDBPersistence implements PersistenceObject {
     private dbName: string,
     private clearDb: boolean = false,
   ) {
-    this.client = new MongoClient(dbUrl);
+    this.client = new MongoClient(dbUrl, {
+      directConnection: true,
+    });
   }
 
   queryAll<T>(_query: string): Promise<T[]> {

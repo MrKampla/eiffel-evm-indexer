@@ -1,5 +1,5 @@
 import { createFileSystemBasedRouter } from './router';
-import { env } from './envApi';
+import { getApiEnv, ApiEnv } from './envApi';
 import { PersistenceObject } from '../types';
 import { getDb } from '../utils/getDb';
 import { logger } from '../utils/logger';
@@ -7,9 +7,18 @@ import { ResponseWithCors } from './responseWithCors';
 import { createGraphqlServer } from './graphql';
 import http from 'node:http';
 import isEsMain from 'es-main';
+import EventEmitter from 'node:events';
+import { AddressInfo } from 'node:net';
 
-export const runEiffelApi = async () => {
+export type EiffelApiEvents = {
+  listening: [string | AddressInfo | null];
+};
+
+export const runEiffelApi = async (
+  props: Partial<ApiEnv> = {},
+): Promise<EventEmitter<EiffelApiEvents>> => {
   logger.log('***STARTING EIFFEL API***');
+  const env = getApiEnv(props);
   const db: PersistenceObject = getDb({
     dbType: env.DB_TYPE,
     dbUrl: env.DB_URL,
@@ -17,6 +26,9 @@ export const runEiffelApi = async () => {
     ssl: env.DB_SSL,
     dbName: env.DB_NAME,
   });
+  await db.init();
+
+  const apiEventEmitter = new EventEmitter<EiffelApiEvents>();
 
   const yoga = createGraphqlServer(db);
 
@@ -55,12 +67,15 @@ export const runEiffelApi = async () => {
 
   server.on('listening', () => {
     logger.log(`EIFFEL API listening on ${JSON.stringify(server.address())}`);
+    apiEventEmitter.emit('listening', server.address());
   });
 
   process.on('exit', () => {
     db.disconnect();
     process.exit();
   });
+
+  return apiEventEmitter;
 };
 
 if (isEsMain(import.meta)) {

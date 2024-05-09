@@ -1,11 +1,11 @@
-import { env } from '../env';
+import { getEnv } from '../env';
 import { getDb } from '../utils/getDb';
 
 const db = getDb({
-  chainId: env.CHAIN_ID,
-  dbType: env.DB_TYPE,
-  dbUrl: env.DB_URL,
-  ssl: env.DB_SSL,
+  chainId: getEnv().CHAIN_ID,
+  dbType: getEnv().DB_TYPE,
+  dbUrl: getEnv().DB_URL,
+  ssl: getEnv().DB_SSL,
 });
 
 console.log(await db.filter({ table: 'events', limit: 0 }));
