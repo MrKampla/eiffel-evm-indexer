@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
-import { EventLog } from '../types';
-import { serialize } from './serializer';
+import { EventLog } from '../types.js';
+import { serialize } from './serializer.js';
 
 /**
  * Creates unique id for event. This is used to prevent duplicate events from being saved.

@@ -1,10 +1,10 @@
-import { EventLog } from '../types';
-import { BIGINT_MATH } from '../utils/bigIntMath';
-import { createUniqueIdForEvent } from '../utils/createUniqueIdForEvent';
-import { serialize } from '../utils/serializer';
-import { logger } from '../utils/logger';
-import { SqlPersistenceBase } from './sqlPersistenceBase';
-import { safeAsync } from '../utils/safeAsync';
+import { EventLog } from '../types.js';
+import { BIGINT_MATH } from '../utils/bigIntMath.js';
+import { createUniqueIdForEvent } from '../utils/createUniqueIdForEvent.js';
+import { serialize } from '../utils/serializer.js';
+import { logger } from '../utils/logger.js';
+import { SqlPersistenceBase } from './sqlPersistenceBase.js';
+import { safeAsync } from '../utils/safeAsync.js';
 
 export class PostgresPersistence extends SqlPersistenceBase {
   private readonly indexingCollectionName = 'indexing_status';

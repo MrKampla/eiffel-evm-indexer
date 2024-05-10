@@ -1,9 +1,9 @@
-import { EventLogFromDb, PersistenceObject } from '../types';
-import { parseEventArgs } from '../utils/parseEventArgs';
-import { ResponseWithCors } from './responseWithCors';
-import { SortClause, WhereClause } from '../database/filters';
-import { parseWhereClause } from './parsers/parseWhereClause';
-import { parseSortClause } from './parsers/parseSortClause';
+import { EventLogFromDb, PersistenceObject } from '../types.js';
+import { parseEventArgs } from '../utils/parseEventArgs.js';
+import { ResponseWithCors } from './responseWithCors.js';
+import { SortClause, WhereClause } from '../database/filters.js';
+import { parseWhereClause } from './parsers/parseWhereClause.js';
+import { parseSortClause } from './parsers/parseSortClause.js';
 
 export const filterEventsWithURLParams = async (
   collectionName: string, // tableName for SQL

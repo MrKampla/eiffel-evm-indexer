@@ -1,5 +1,5 @@
 import { setTimeout } from 'node:timers/promises';
-import { logger } from './logger';
+import { logger } from './logger.js';
 
 export const safeAsync = async <T>(fn: () => Promise<T>): Promise<T> => {
   while (true) {

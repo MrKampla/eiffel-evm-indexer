@@ -1,7 +1,7 @@
 import { PublicClient, createPublicClient, defineChain, fallback, http } from 'viem';
-import { getEnv } from '../env';
-import { BlockchainClient, EventLog, GetLogsParams } from '../types';
-import { safeAsync } from '../utils/safeAsync';
+import { getEnv } from '../env.js';
+import { BlockchainClient, EventLog, GetLogsParams } from '../types.js';
+import { safeAsync } from '../utils/safeAsync.js';
 
 export class ViemClient implements BlockchainClient {
   protected _publicClient?: PublicClient;

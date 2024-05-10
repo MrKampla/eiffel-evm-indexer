@@ -1,4 +1,4 @@
-import { EventLogFromDb } from '../types';
+import { EventLogFromDb } from '../types.js';
 
 export const parseEventArgs = (event: EventLogFromDb) => {
   if (!event.args) {

@@ -1,4 +1,4 @@
-import { IndexerTarget } from './types';
+import { IndexerTarget } from './types.js';
 import { z } from 'zod';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -56,6 +56,17 @@ const getTargets = (overrides: Partial<Env> = {}) => {
   return TARGETS;
 };
 
+const getChainRpcUrls = (overrides: Partial<Env> = {}) => {
+  if (overrides.CHAIN_RPC_URLS || Array.isArray(process.env.CHAIN_RPC_URLS)) {
+    return overrides.CHAIN_RPC_URLS || process.env.CHAIN_RPC_URLS;
+  }
+
+  if (process.env.CHAIN_RPC_URLS) {
+    return JSON.parse(process.env.CHAIN_RPC_URLS);
+  }
+  return undefined;
+};
+
 /**
  * First checks if the env is already cached, if it is then it is returned. If env is not cached, it reads the env variables
  * from the .env file and the targets.json file and also overrides passed by the user (only when running programatically,
@@ -68,16 +79,23 @@ export const getEnv = (overrides: Partial<Env> = {}): Env => {
 
   const env = EnvSchema.parse({
     ...process.env,
-    CHAIN_RPC_URLS:
-      overrides.CHAIN_RPC_URLS ?? JSON.parse(JSON.stringify(process.env.CHAIN_RPC_URLS)),
-    START_FROM_BLOCK: overrides.START_FROM_BLOCK ?? BigInt(process.env.START_FROM_BLOCK!),
+    ...overrides,
+    CHAIN_RPC_URLS: getChainRpcUrls(overrides),
+    START_FROM_BLOCK:
+      overrides.START_FROM_BLOCK ?? process.env.START_FROM_BLOCK
+        ? BigInt(process.env.START_FROM_BLOCK!)
+        : undefined,
     BLOCK_CONFIRMATIONS:
-      overrides.BLOCK_CONFIRMATIONS ?? BigInt(process.env.BLOCK_CONFIRMATIONS!),
+      overrides.BLOCK_CONFIRMATIONS ?? process.env.BLOCK_CONFIRMATIONS
+        ? BigInt(process.env.BLOCK_CONFIRMATIONS!)
+        : undefined,
     BLOCK_FETCH_INTERVAL:
       overrides.BLOCK_FETCH_INTERVAL ?? Number(process.env.BLOCK_FETCH_INTERVAL),
     BLOCK_FETCH_BATCH_SIZE:
-      overrides.BLOCK_FETCH_BATCH_SIZE ?? BigInt(process.env.BLOCK_FETCH_BATCH_SIZE!),
-    ...overrides,
+      overrides.BLOCK_FETCH_BATCH_SIZE ?? process.env.BLOCK_FETCH_BATCH_SIZE
+        ? BigInt(process.env.BLOCK_FETCH_BATCH_SIZE!)
+        : undefined,
+    CHAIN_ID: overrides.CHAIN_ID ?? Number(process.env.CHAIN_ID),
     TARGETS: getTargets(overrides),
   });
 

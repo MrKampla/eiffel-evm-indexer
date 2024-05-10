@@ -1,17 +1,19 @@
-import * as Knex from 'knex';
+import knexPkg from 'knex';
+// knex is a CommonJS module, so we need to use this syntax to import it
+const { knex } = knexPkg;
 import type { Knex as KnexType } from 'knex';
-import { EventLog, PersistenceObject } from '../types';
-import { FilterOperators, FilterType, SortClause, WhereClause } from './filters';
+import { EventLog, PersistenceObject } from '../types.js';
+import { FilterOperators, FilterType, SortClause, WhereClause } from './filters.js';
 
 type QueryBuilderOrderByRaw = {
   orderByRaw: (raw: string) => void;
-} & Knex.QueryBuilder;
+} & KnexType.QueryBuilder;
 
 export abstract class SqlPersistenceBase implements PersistenceObject {
   protected readonly _knexClient: KnexType;
 
   constructor(client: 'pg' | 'better-sqlite3', dbUrl: string, dbSsl: boolean) {
-    this._knexClient = Knex.knex({
+    this._knexClient = knex({
       client,
       useNullAsDefault: true,
       connection:
@@ -24,7 +26,7 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
     });
   }
 
-  public getUnderlyingDataSource(): Knex.Knex {
+  public getUnderlyingDataSource(): KnexType {
     return this._knexClient;
   }
 

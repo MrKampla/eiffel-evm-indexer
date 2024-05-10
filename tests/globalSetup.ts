@@ -1,4 +1,4 @@
-import { startLocalHardhatChainAndWaitForDeployments } from './testUtils';
+import { startLocalHardhatChainAndWaitForDeployments } from './testUtils.js';
 
 export default async function setup({}) {
   const childProcess = await startLocalHardhatChainAndWaitForDeployments();

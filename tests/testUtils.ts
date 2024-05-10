@@ -1,5 +1,5 @@
 import { ChildProcess, exec } from 'node:child_process';
-import { IndexerTarget } from 'src';
+import { IndexerTarget } from '../src/index.js';
 import * as viem from 'viem';
 import { hardhat } from 'viem/chains';
 

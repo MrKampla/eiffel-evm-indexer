@@ -1,7 +1,7 @@
-import { MongoDBPersistence } from '../database/mongoPersistence';
-import { PostgresPersistence } from '../database/postgresPersistence';
-import { SqlitePersistence } from '../database/sqlitePersistence';
-import { PersistenceObject } from '../types';
+import { MongoDBPersistence } from '../database/mongoPersistence.js';
+import { PostgresPersistence } from '../database/postgresPersistence.js';
+import { SqlitePersistence } from '../database/sqlitePersistence.js';
+import { PersistenceObject } from '../types.js';
 
 export const getDb = ({
   chainId,

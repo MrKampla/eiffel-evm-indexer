@@ -1,10 +1,10 @@
-import { EventLogsFetcher } from './indexer/eventLogsFetcher';
-import { Indexer } from './indexer';
-import { ViemClient } from './rpcClient/viemClient';
-import { PersistenceObject } from './types';
-import { getDb } from './utils/getDb';
+import { EventLogsFetcher } from './indexer/eventLogsFetcher.js';
+import { Indexer } from './indexer/index.js';
+import { ViemClient } from './rpcClient/viemClient.js';
+import { PersistenceObject } from './types.js';
+import { getDb } from './utils/getDb.js';
 import isEsMain from 'es-main';
-import { Env, getEnv } from './env';
+import { Env, getEnv } from './env.js';
 
 export const runEiffelIndexer = async (props: Partial<Env> = {}) => {
   const viemClient = new ViemClient();

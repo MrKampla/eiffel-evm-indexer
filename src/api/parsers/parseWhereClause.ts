@@ -1,4 +1,4 @@
-import { FilterOperators, FilterType, WhereClause } from '../../database/filters';
+import { FilterOperators, FilterType, WhereClause } from '../../database/filters.js';
 
 export const parseWhereClause = (
   t: string,

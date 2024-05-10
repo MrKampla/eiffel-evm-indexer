@@ -1,7 +1,7 @@
-import { getApiEnv } from '../envApi';
-import { IndexingStatus, PersistenceObject } from '../../types';
-import { ResponseWithCors } from '../responseWithCors';
-import { FilterOperators, FilterType } from '../../database/filters';
+import { getApiEnv } from '../envApi.js';
+import { IndexingStatus, PersistenceObject } from '../../types.js';
+import { ResponseWithCors } from '../responseWithCors.js';
+import { FilterOperators, FilterType } from '../../database/filters.js';
 
 export default async (_request: Request, db: PersistenceObject) => {
   const item = await db.filter<IndexingStatus>({

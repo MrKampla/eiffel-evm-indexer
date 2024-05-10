@@ -1,12 +1,12 @@
 import Database, { Database as DatabaseType } from 'better-sqlite3';
-import { EventLog } from '../types';
-import { serialize } from '../utils/serializer';
-import { BIGINT_MATH } from '../utils/bigIntMath';
-import { createUniqueIdForEvent } from '../utils/createUniqueIdForEvent';
-import { logger } from '../utils/logger';
-import { SqlPersistenceBase } from './sqlPersistenceBase';
+import { EventLog } from '../types.js';
+import { serialize } from '../utils/serializer.js';
+import { BIGINT_MATH } from '../utils/bigIntMath.js';
+import { createUniqueIdForEvent } from '../utils/createUniqueIdForEvent.js';
+import { logger } from '../utils/logger.js';
+import { SqlPersistenceBase } from './sqlPersistenceBase.js';
 import { Knex } from 'knex';
-import { safeAsync } from '../utils/safeAsync';
+import { safeAsync } from '../utils/safeAsync.js';
 
 export class SqlitePersistence extends SqlPersistenceBase {
   db: DatabaseType;

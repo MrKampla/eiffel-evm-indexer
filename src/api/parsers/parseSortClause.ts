@@ -1,4 +1,4 @@
-import { FilterType, SortClause } from '../../database/filters';
+import { FilterType, SortClause } from '../../database/filters.js';
 
 export const parseSortClause = (
   t: string,

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { runEiffelApi } from '../src/api';
-import { runEiffelIndexer } from 'src';
-import { getTestIndexerEnvs } from './testUtils';
+import { runEiffelApi } from '../src/api/index.js';
+import { runEiffelIndexer } from '../src/index.js';
+import { getTestIndexerEnvs } from './testUtils.js';
 import { setTimeout } from 'node:timers/promises';
 
 describe('SQLite tests', () => {

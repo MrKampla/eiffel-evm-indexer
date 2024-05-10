@@ -1,9 +1,9 @@
 import { describe, it, beforeAll, afterAll, expect } from 'vitest';
 import { MongoDBContainer, StartedMongoDBContainer } from '@testcontainers/mongodb';
-import { runEiffelApi } from '../src/api';
-import { runEiffelIndexer } from '../src';
+import { runEiffelApi } from '../src/api/index.js';
+import { runEiffelIndexer } from '../src/index.js';
 import { setTimeout } from 'node:timers/promises';
-import { getTestIndexerEnvs } from './testUtils';
+import { getTestIndexerEnvs } from './testUtils.js';
 
 describe('MongoDB tests', () => {
   let mongoContainer: StartedMongoDBContainer;

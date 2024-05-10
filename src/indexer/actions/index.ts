@@ -1,5 +1,5 @@
 import fs from 'node:fs/promises';
-import { BlockchainClient, EventLog, PersistenceObject } from '../../types';
+import { BlockchainClient, EventLog, PersistenceObject } from '../../types.js';
 
 export interface ActionProps<
   UnderlyingDataSourceType = unknown,

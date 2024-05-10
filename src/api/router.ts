@@ -1,10 +1,9 @@
 import fs from 'node:fs';
-import { PersistenceObject } from '../types';
-import { ResponseWithCors } from './responseWithCors';
-import { logger } from '../utils/logger';
+import { PersistenceObject } from '../types.js';
+import { ResponseWithCors } from './responseWithCors.js';
+import { logger } from '../utils/logger.js';
 import http from 'node:http';
-import { FileSystemRouter, MatchedRoute } from './fileSystemRouter';
-import { createRequire } from 'node:module';
+import { FileSystemRouter, MatchedRoute } from './fileSystemRouter.js';
 import path from 'node:path';
 
 export type Handler = (
@@ -12,7 +11,6 @@ export type Handler = (
   db: PersistenceObject,
 ) => Promise<Response | {}>;
 
-// require.resolve('eiffel-evm-indexer') doesn't work in Bun
 const findClosestNodeModulesPath = (dir: string): string => {
   if (fs.existsSync(`${dir}/node_modules`)) {
     if (fs.existsSync(`${dir}/node_modules/eiffel-evm-indexer`)) {
@@ -24,12 +22,9 @@ const findClosestNodeModulesPath = (dir: string): string => {
 };
 
 export const createFileSystemBasedRouter = async (db: PersistenceObject) => {
-  const require = createRequire(import.meta.url);
-
-  const nodeModulesPackageDistPath =
-    typeof Bun === 'undefined'
-      ? path.dirname(require.resolve('eiffel-evm-indexer'))
-      : `${findClosestNodeModulesPath(import.meta.url.slice('file://'.length))}`;
+  const nodeModulesPackageDistPath = findClosestNodeModulesPath(
+    import.meta.url.slice('file://'.length),
+  );
 
   logger.log(
     `Scanning for default endpoints in ${nodeModulesPackageDistPath}/api/endpoints...`,
@@ -77,6 +72,7 @@ export const createFileSystemBasedRouter = async (db: PersistenceObject) => {
           handlersCache.set(`${apiPath}/`, routeHandler);
           return routeHandler(request, db);
         } catch (e) {
+          console.error(e);
           return new ResponseWithCors(
             JSON.stringify({
               error: `Default handler function for ${new URL(request.url ?? 'http://localhost/').pathname} module not found`,

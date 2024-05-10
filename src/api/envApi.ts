@@ -27,11 +27,11 @@ export const getApiEnv = (overrides: Partial<ApiEnv> = {}): ApiEnv => {
 
   const env = ApiEnvSchema.parse({
     ...process.env,
-    CHAIN_ID: Number(process.env.CHAIN_ID),
-    API_PORT: Number(process.env.API_PORT),
-    DB_SSL: process.env.DB_SSL === 'true',
-    GRAPHQL: process.env.GPAPHQL === 'true',
     ...overrides,
+    CHAIN_ID: overrides.CHAIN_ID ?? Number(process.env.CHAIN_ID),
+    API_PORT: overrides.API_PORT ?? Number(process.env.API_PORT),
+    DB_SSL: overrides.DB_SSL ?? process.env.DB_SSL === 'true',
+    GRAPHQL: overrides.GPAPHQL ?? process.env.GPAPHQL === 'true',
   });
 
   if (process.env.DB_TYPE === 'postgres' && !process.env.DB_URL) {

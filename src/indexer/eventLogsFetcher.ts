@@ -3,11 +3,11 @@ import {
   BlockchainClient,
   EventsFetcher,
   GetEventsBatchParam,
-} from '../types';
-import { BIGINT_MATH } from '../utils/bigIntMath';
-import { getEnv } from '../env';
+} from '../types.js';
+import { BIGINT_MATH } from '../utils/bigIntMath.js';
+import { getEnv } from '../env.js';
 import { setTimeout } from 'node:timers/promises';
-import { logger } from '../utils/logger';
+import { logger } from '../utils/logger.js';
 
 export class EventLogsFetcher implements EventsFetcher {
   constructor(private publicClient: BlockchainClient) {}

@@ -1,5 +1,5 @@
-import { ResponseWithCors } from '../responseWithCors';
-import packageJson from '../../../package.json';
+import { ResponseWithCors } from '../responseWithCors.js';
+import packageJson from '../../../package.json' with { type: "json" };
 
 export default () =>
   new ResponseWithCors(

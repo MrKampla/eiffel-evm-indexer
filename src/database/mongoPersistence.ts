@@ -1,10 +1,10 @@
-import { MongoClient, Db, Collection, Document, Filter, ObjectId } from 'mongodb';
-import { EventLog, PersistenceObject } from '../types';
-import { createUniqueIdForEvent } from '../utils/createUniqueIdForEvent';
-import { logger } from '../utils/logger';
-import { BIGINT_MATH } from '../utils/bigIntMath';
-import { WhereClause, SortClause, FilterOperators, FilterType } from './filters';
-import { serialize } from '../utils/serializer';
+import { MongoClient, Db, Collection, Document, Filter } from 'mongodb';
+import { EventLog, PersistenceObject } from '../types.js';
+import { createUniqueIdForEvent } from '../utils/createUniqueIdForEvent.js';
+import { logger } from '../utils/logger.js';
+import { BIGINT_MATH } from '../utils/bigIntMath.js';
+import { WhereClause, SortClause, FilterOperators, FilterType } from './filters.js';
+import { serialize } from '../utils/serializer.js';
 
 export class MongoDBPersistence implements PersistenceObject {
   private client: MongoClient;

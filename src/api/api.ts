@@ -1,10 +1,10 @@
-import { createFileSystemBasedRouter } from './router';
-import { getApiEnv, ApiEnv } from './envApi';
-import { PersistenceObject } from '../types';
-import { getDb } from '../utils/getDb';
-import { logger } from '../utils/logger';
-import { ResponseWithCors } from './responseWithCors';
-import { createGraphqlServer } from './graphql';
+import { createFileSystemBasedRouter } from './router.js';
+import { getApiEnv, ApiEnv } from './envApi.js';
+import { PersistenceObject } from '../types.js';
+import { getDb } from '../utils/getDb.js';
+import { logger } from '../utils/logger.js';
+import { ResponseWithCors } from './responseWithCors.js';
+import { createGraphqlServer } from './graphql/index.js';
 import http from 'node:http';
 import isEsMain from 'es-main';
 import EventEmitter from 'node:events';

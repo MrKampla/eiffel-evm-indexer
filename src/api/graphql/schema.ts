@@ -1,12 +1,12 @@
 import { YogaInitialContext, createSchema } from 'graphql-yoga';
-import { EventLogFromDb, IndexingStatus, PersistenceObject } from '../../types';
+import { EventLogFromDb, IndexingStatus, PersistenceObject } from '../../types.js';
 import {
   FilterOperators,
   FilterType,
   SortClause,
   WhereClause,
-} from '../../database/filters';
-import { parseEventArgs } from '../../utils/parseEventArgs';
+} from '../../database/filters.js';
+import { parseEventArgs } from '../../utils/parseEventArgs.js';
 
 export type IndexerContext = YogaInitialContext & {
   db: PersistenceObject;

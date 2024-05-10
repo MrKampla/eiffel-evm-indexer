@@ -1,15 +1,15 @@
 import fs from 'node:fs';
-import { PersistenceObject, EventsFetcher, BlockchainClient } from '../types';
-import { logger } from '../utils/logger';
+import { PersistenceObject, EventsFetcher, BlockchainClient } from '../types.js';
+import { logger } from '../utils/logger.js';
 import {
   Action,
   initializeActions,
   runOnBatchIndexedActions,
   runOnClearActions,
   scanForActions,
-} from './actions';
+} from './actions/index.js';
 import EventEmitter from 'node:events';
-import { getEnv } from '../env';
+import { getEnv } from '../env.js';
 
 export type EiffelIndexerEvents = {
   indexing: [];

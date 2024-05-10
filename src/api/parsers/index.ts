@@ -1,2 +1,2 @@
-export * from './parseSortClause';
-export * from './parseWhereClause';
+export * from './parseSortClause.js';
+export * from './parseWhereClause.js';

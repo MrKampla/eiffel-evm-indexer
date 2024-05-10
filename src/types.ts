@@ -1,5 +1,5 @@
 import { AbiItem } from 'viem';
-import { SortClause, WhereClause } from './database/filters';
+import { SortClause, WhereClause } from './database/filters.js';
 
 export type Hash = `0x${string}`;
 

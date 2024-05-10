@@ -1,5 +1,5 @@
-import { getEnv } from '../env';
-import { getDb } from '../utils/getDb';
+import { getEnv } from '../env.js';
+import { getDb } from '../utils/getDb.js';
 
 const db = getDb({
   chainId: getEnv().CHAIN_ID,

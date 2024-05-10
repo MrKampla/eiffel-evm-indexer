@@ -1,9 +1,9 @@
 import { YogaInitialContext, createYoga } from 'graphql-yoga';
-import { PersistenceObject } from '../../types';
-import { schema } from './schema';
-import { getApiEnv } from '../envApi';
+import { PersistenceObject } from '../../types.js';
+import { schema } from './schema.js';
+import { getApiEnv } from '../envApi.js';
 
-export * from './schema';
+export * from './schema.js';
 
 export const createGraphqlServer = (db: PersistenceObject): any =>
   createYoga({
