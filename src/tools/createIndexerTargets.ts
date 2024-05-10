@@ -1,7 +1,9 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 
 import fs from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { program } from 'commander';
+import isEsMain from 'es-main';
 
 export const createIndexerTargetsProgram = program
   .command('create:targets')
@@ -52,7 +54,7 @@ async function createIndexerTargets() {
     target.abi.flatMap((abi) => ({ abiItem: abi, address: target.address })),
   );
 
-  if (await fs.exists('./targets.json')) {
+  if (existsSync('./targets.json')) {
     const existingTargets = JSON.parse(await fs.readFile('./targets.json', 'utf8'));
     if (existingTargets.length) {
       if (!yesToOverwrite) {
@@ -73,6 +75,6 @@ async function createIndexerTargets() {
   console.log('✅ Written targets to ./targets.json');
 }
 
-if (import.meta.main) {
+if (isEsMain(import.meta)) {
   createIndexerTargetsProgram.parse(process.argv);
 }

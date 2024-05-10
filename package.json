@@ -1,52 +1,75 @@
 {
   "name": "eiffel-evm-indexer",
-  "module": "src/index.ts",
   "type": "module",
-  "version": "1.4.0",
+  "version": "2.0.0",
   "bin": {
-    "eiffel-evm-indexer": "./src/cli.ts",
-    "eiffel": "./src/cli.ts"
+    "eiffel-evm-indexer": "./dist/cli.js",
+    "eiffel": "./dist/cli.js"
   },
   "files": [
     "src",
-    "bun.lockb"
+    "dist"
   ],
   "exports": {
-    ".": "./src/index.ts",
-    "./api": "./src/api/index.ts",
-    "./utils": "./src/utils/index.ts",
-    "./types": "./src/types.ts"
+    ".": "./dist/index.js",
+    "./api": "./dist/api/index.js",
+    "./utils": "./dist/utils/index.js",
+    "./types": "./dist/index.d.ts"
+  },
+  "engines": {
+    "node": ">=16",
+    "pnpm": ">=9"
   },
   "scripts": {
-    "dev": "bunx concurrently \"bun watch:indexer\"  \"bun watch:api\"",
-    "start:indexer": "bun ./src/main.ts",
-    "watch:indexer": "bun --watch ./src/main.ts",
-    "start:api": "bun ./src/api/api.ts",
-    "watch:api": "bun --watch ./src/api/api.ts",
-    "query": "bun ./src/tools/queryDb.ts",
-    "create:targets": "bun ./src/tools/createIndexerTargets.ts",
+    "dev": "pnpm dlx concurrently \"pnpm run watch:indexer\"  \"pnpm run watch:api\"",
+    "start:indexer": "tsx ./src/main.ts",
+    "watch:indexer": "tsx watch ./src/main.ts",
+    "bun:watch:indexer": "bun --watch ./src/main.ts",
+    "start:api": "tsx ./src/api/api.ts",
+    "watch:api": "tsx --watch ./src/api/api.ts",
+    "bun:watch:api": "bun --watch ./src/api/api.ts",
+    "query": "tsx ./src/tools/queryDb.ts",
+    "create:targets": "tsx ./src/tools/createIndexerTargets.ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "docker:dev": "docker compose -f ./docker/dev/docker-compose.yml up --build",
-    "docker:prod": "docker compose -f ./docker/prod/docker-compose.yml up --build"
+    "docker:prod": "docker compose -f ./docker/prod/docker-compose.yml up --build",
+    "build": "tsup src --clean --shims --format esm --out-dir dist --external bun:sqlite",
+    "postbuild": "pnpm run tsc",
+    "tsc": "tsc",
+    "posttsc": "cp -r dist/src/ dist/ && rm -rf dist/src",
+    "prepublishOnly": "pnpm run build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest --sequence.concurrent run ./tests/*.test.ts "
   },
   "devDependencies": {
-    "@types/bun": "^1.1.0",
+    "@testcontainers/mongodb": "^10.9.0",
+    "@testcontainers/postgresql": "^10.9.0",
+    "@types/bun": "^1.1.1",
     "@types/node": "^20.10.6",
-    "prettier": "^3.0.3"
+    "hardhat": "^2.22.3",
+    "prettier": "^3.0.3",
+    "tsup": "^8.0.2",
+    "tsx": "^4.8.2",
+    "vitest": "^1.6.0"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "better-sqlite3": "^9.2.2",
+    "@types/better-sqlite3": "^7.6.10",
+    "better-sqlite3": "^9.6.0",
+    "bun": "^1.1.6",
     "commander": "^11.0.0",
+    "dotenv": "^16.4.5",
+    "es-main": "^1.3.0",
     "graphql": "^16.8.1",
     "graphql-yoga": "^5.0.0",
     "knex": "^3.1.0",
     "mongodb": "^6.1.0",
     "pg": "^8.11.3",
-    "viem": "^1.21.1",
-    "zod": "^3.22.4"
+    "testcontainers": "^10.9.0",
+    "viem": "^2.9.32",
+    "zod": "^3.23.6"
   },
   "trustedDependencies": []
 }

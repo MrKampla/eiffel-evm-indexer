@@ -1,5 +1,5 @@
 import { PublicClient, createPublicClient, defineChain, fallback, http } from 'viem';
-import { env } from '../env';
+import { getEnv } from '../env';
 import { BlockchainClient, EventLog, GetLogsParams } from '../types';
 import { safeAsync } from '../utils/safeAsync';
 
@@ -10,7 +10,7 @@ export class ViemClient implements BlockchainClient {
     return safeAsync(
       async () =>
         (await this.publicClient.getBlock({ blockTag: 'latest' })).number -
-        env.BLOCK_CONFIRMATIONS,
+        getEnv().BLOCK_CONFIRMATIONS,
     );
   }
 
@@ -30,10 +30,10 @@ export class ViemClient implements BlockchainClient {
   }
 
   protected createPublicClient(): PublicClient {
-    const transports = env.CHAIN_RPC_URLS.map((rpcUrl: string) => http(rpcUrl));
+    const transports = getEnv().CHAIN_RPC_URLS.map((rpcUrl: string) => http(rpcUrl));
     return createPublicClient({
       chain: defineChain({
-        id: env.CHAIN_ID,
+        id: getEnv().CHAIN_ID,
         name: 'customChain',
         nativeCurrency: {
           decimals: 18,
@@ -42,10 +42,10 @@ export class ViemClient implements BlockchainClient {
         },
         rpcUrls: {
           default: {
-            http: [env.CHAIN_RPC_URLS[0]],
+            http: [getEnv().CHAIN_RPC_URLS[0]],
           },
           public: {
-            http: [env.CHAIN_RPC_URLS[0]],
+            http: [getEnv().CHAIN_RPC_URLS[0]],
           },
         },
         network: 'customChain',

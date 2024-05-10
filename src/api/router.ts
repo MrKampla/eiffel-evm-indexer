@@ -1,22 +1,52 @@
 import fs from 'node:fs';
 import { PersistenceObject } from '../types';
 import { ResponseWithCors } from './responseWithCors';
-import { MatchedRoute } from 'bun';
 import { logger } from '../utils/logger';
-import { FileSystemRouter } from 'bun';
+import http from 'node:http';
+import { FileSystemRouter, MatchedRoute } from './fileSystemRouter';
+import { createRequire } from 'node:module';
+import path from 'node:path';
 
-export type Handler = (req: Request, db: PersistenceObject) => Promise<Response>;
+export type Handler = (
+  req: http.IncomingMessage,
+  db: PersistenceObject,
+) => Promise<Response | {}>;
+
+// require.resolve('eiffel-evm-indexer') doesn't work in Bun
+const findClosestNodeModulesPath = (dir: string): string => {
+  if (fs.existsSync(`${dir}/node_modules`)) {
+    if (fs.existsSync(`${dir}/node_modules/eiffel-evm-indexer`)) {
+      return `${dir}/node_modules/eiffel-evm-indexer`;
+    }
+    return `${dir}/dist`;
+  }
+  return findClosestNodeModulesPath(path.dirname(dir));
+};
 
 export const createFileSystemBasedRouter = async (db: PersistenceObject) => {
+  const require = createRequire(import.meta.url);
+
+  const nodeModulesPackageDistPath =
+    typeof Bun === 'undefined'
+      ? path.dirname(require.resolve('eiffel-evm-indexer'))
+      : `${findClosestNodeModulesPath(import.meta.url.slice('file://'.length))}`;
+
+  logger.log(
+    `Scanning for default endpoints in ${nodeModulesPackageDistPath}/api/endpoints...`,
+  );
   const defaultEndpointsFsRouter = new FileSystemRouter({
-    style: 'nextjs',
-    dir: `${import.meta.dir}/endpoints`,
+    dir: `${nodeModulesPackageDistPath}/api/endpoints`,
   });
+  logger.log(
+    `Found ${
+      defaultEndpointsFsRouter ? Object.keys(defaultEndpointsFsRouter.routes).length : 0
+    } default endpoints`,
+  );
+
   logger.log(`Scanning for custom endpoints in ${process.cwd()}/endpoints...`);
   const areCustomEndpointsDefined = fs.existsSync(`${process.cwd()}/endpoints`);
   const customEndpointsFsRouter = areCustomEndpointsDefined
     ? new FileSystemRouter({
-        style: 'nextjs',
         dir: `${process.cwd()}/endpoints`,
       })
     : undefined;
@@ -29,8 +59,9 @@ export const createFileSystemBasedRouter = async (db: PersistenceObject) => {
   const handlersCache = new Map<string, Handler>();
 
   return {
-    route: async (request: Request): Promise<Response> => {
-      const apiPath = new URL(request.url).pathname;
+    route: async (request: http.IncomingMessage): Promise<Response | {}> => {
+      request.url = `http://localhost${request.url}`;
+      const apiPath = new URL(request.url!).pathname;
       const preloadedRequestHandler =
         handlersCache.get(apiPath) ?? handlersCache.get(`${apiPath}/`);
       if (preloadedRequestHandler) {
@@ -38,23 +69,34 @@ export const createFileSystemBasedRouter = async (db: PersistenceObject) => {
       }
 
       const invokeEndpointHandler = async (matchedRoute: MatchedRoute) => {
-        const routeHandler = (await import(matchedRoute.filePath)).default as (
-          req: Request,
-          db: PersistenceObject,
-        ) => Promise<Response>;
-        handlersCache.set(`${apiPath}/`, routeHandler);
-        return routeHandler(request, db);
+        try {
+          const routeHandler = (await import(matchedRoute.filePath)).default as (
+            req: http.IncomingMessage,
+            db: PersistenceObject,
+          ) => Promise<Response | {}>;
+          handlersCache.set(`${apiPath}/`, routeHandler);
+          return routeHandler(request, db);
+        } catch (e) {
+          return new ResponseWithCors(
+            JSON.stringify({
+              error: `Default handler function for ${new URL(request.url ?? 'http://localhost/').pathname} module not found`,
+            }),
+            {
+              status: 500,
+            },
+          );
+        }
       };
 
       const matchedFile = defaultEndpointsFsRouter.match(
-        new URL(request.url).pathname.replace('/api', ''),
+        new URL(request.url!).pathname.replace('/api', ''),
       );
       if (matchedFile) {
         return invokeEndpointHandler(matchedFile);
       }
 
       const matchedCustomEndpointFile = customEndpointsFsRouter?.match(
-        new URL(request.url).pathname.replace('/api', ''),
+        new URL(request.url!).pathname.replace('/api', ''),
       );
       if (matchedCustomEndpointFile) {
         return invokeEndpointHandler(matchedCustomEndpointFile);

@@ -1,4 +1,4 @@
-import { Database } from 'bun:sqlite';
+import Database, { Database as DatabaseType } from 'better-sqlite3';
 import { EventLog } from '../types';
 import { serialize } from '../utils/serializer';
 import { BIGINT_MATH } from '../utils/bigIntMath';
@@ -9,14 +9,19 @@ import { Knex } from 'knex';
 import { safeAsync } from '../utils/safeAsync';
 
 export class SqlitePersistence extends SqlPersistenceBase {
-  db: Database;
+  db: DatabaseType;
+  private isBun: boolean = typeof Bun !== 'undefined';
   constructor(
     private chainId: number,
-    dbUrl: string,
+    private dbUrl: string,
     private clearDb: boolean = false,
   ) {
     super('better-sqlite3', dbUrl, true);
-    this.db = new Database(dbUrl, { create: true });
+    if (this.isBun) {
+      this.db = undefined as any; // will be initialized in init
+      return;
+    }
+    this.db = new Database(dbUrl, { fileMustExist: false });
   }
 
   public getUnderlyingDataSource(): Knex {
@@ -30,12 +35,12 @@ export class SqlitePersistence extends SqlPersistenceBase {
   private async prepareEventsTable() {
     await safeAsync(async () => {
       if (this.clearDb) {
-        this.db.run(this._knexClient.schema.dropTableIfExists('events').toQuery());
+        this.db.exec(this._knexClient.schema.dropTableIfExists('events').toQuery());
         logger.log(`Dropped tables`);
       }
     });
     await safeAsync(async () => {
-      this.db.run(
+      this.db.exec(
         this._knexClient.schema
           .createTableIfNotExists('events', (table) => {
             table.text('id').primary();
@@ -54,9 +59,11 @@ export class SqlitePersistence extends SqlPersistenceBase {
 
   private prepareIndexingStatusTable(): void {
     if (this.clearDb) {
-      this.db.run(this._knexClient.schema.dropTableIfExists('indexing_status').toQuery());
+      this.db.exec(
+        this._knexClient.schema.dropTableIfExists('indexing_status').toQuery(),
+      );
     }
-    this.db.run(
+    this.db.exec(
       this._knexClient.schema
         .createTableIfNotExists('indexing_status', (table) => {
           table.integer('chainId').primary();
@@ -72,6 +79,11 @@ export class SqlitePersistence extends SqlPersistenceBase {
   }
 
   async init() {
+    if (this.isBun) {
+      const { Database: BunSqlite } = await import('bun:sqlite');
+      const bunSqliteDb = new BunSqlite(this.dbUrl, { create: true });
+      this.db = bunSqliteDb as any;
+    }
     logger.log(`Initializing sqlite instance`);
     await safeAsync(async () =>
       this.db.transaction(async () => {
@@ -88,7 +100,7 @@ export class SqlitePersistence extends SqlPersistenceBase {
     const writeLogsBatch = this.db.transaction(
       (events: EventLog[], latestIndexedBlockString: string) => {
         if (events.length) {
-          this.db.run(
+          this.db.exec(
             this._knexClient
               .insert(
                 events.map((event) => ({
@@ -107,7 +119,7 @@ export class SqlitePersistence extends SqlPersistenceBase {
               .toQuery(),
           );
         }
-        this.db.run(
+        this.db.exec(
           this._knexClient
             .insert({
               chainId: this.chainId.toString(),
@@ -131,7 +143,7 @@ export class SqlitePersistence extends SqlPersistenceBase {
       async () =>
         (
           this.db
-            .query(`SELECT blockNumber FROM indexing_status WHERE chainId = ${chainId}`)
+            .prepare(`SELECT blockNumber FROM indexing_status WHERE chainId = ${chainId}`)
             .get() as { blockNumber?: number }
         )?.blockNumber,
     );
@@ -144,7 +156,7 @@ export class SqlitePersistence extends SqlPersistenceBase {
   public async queryAll<T>(query: string, options = { safeAsync: true }): Promise<T[]> {
     const queryFn = async () => {
       logger.log(query);
-      return Promise.resolve(this.db.query(query).all() as T[]);
+      return Promise.resolve(this.db.prepare(query).all() as T[]);
     };
     return options.safeAsync ? safeAsync(queryFn) : queryFn();
   }
@@ -152,7 +164,7 @@ export class SqlitePersistence extends SqlPersistenceBase {
   public async queryOne<T>(query: string, options = { safeAsync: true }): Promise<T> {
     const queryFn = async () => {
       logger.log(query);
-      return Promise.resolve(this.db.query(query).get() as T);
+      return Promise.resolve(this.db.prepare(query).get() as T);
     };
     return options.safeAsync ? safeAsync(queryFn) : queryFn();
   }

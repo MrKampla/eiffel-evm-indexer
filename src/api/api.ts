@@ -1,13 +1,24 @@
 import { createFileSystemBasedRouter } from './router';
-import { env } from './envApi';
+import { getApiEnv, ApiEnv } from './envApi';
 import { PersistenceObject } from '../types';
 import { getDb } from '../utils/getDb';
 import { logger } from '../utils/logger';
 import { ResponseWithCors } from './responseWithCors';
 import { createGraphqlServer } from './graphql';
+import http from 'node:http';
+import isEsMain from 'es-main';
+import EventEmitter from 'node:events';
+import { AddressInfo } from 'node:net';
 
-export const runEiffelApi = async () => {
+export type EiffelApiEvents = {
+  listening: [string | AddressInfo | null];
+};
+
+export const runEiffelApi = async (
+  props: Partial<ApiEnv> = {},
+): Promise<EventEmitter<EiffelApiEvents>> => {
   logger.log('***STARTING EIFFEL API***');
+  const env = getApiEnv(props);
   const db: PersistenceObject = getDb({
     dbType: env.DB_TYPE,
     dbUrl: env.DB_URL,
@@ -15,34 +26,58 @@ export const runEiffelApi = async () => {
     ssl: env.DB_SSL,
     dbName: env.DB_NAME,
   });
+  await db.init();
+
+  const apiEventEmitter = new EventEmitter<EiffelApiEvents>();
 
   const yoga = createGraphqlServer(db);
 
   const router = await createFileSystemBasedRouter(db);
 
   const server = env.GPAPHQL
-    ? Bun.serve({ fetch: yoga.fetch.bind(yoga), port: env.API_PORT })
-    : Bun.serve({
-        port: env.API_PORT,
-        async fetch(request) {
+    ? http.createServer(yoga.fetch.bind(yoga)).listen(env.API_PORT)
+    : http
+        .createServer((req, res) => {
           // Handle CORS preflight requests
-          if (request.method === 'OPTIONS') {
-            const res = new ResponseWithCors('Departed');
-            return res;
+          if (req.method === 'OPTIONS') {
+            const response = new ResponseWithCors('Departed');
+            res.writeHead(
+              response.status,
+              response.headers as unknown as http.OutgoingHttpHeaders,
+            );
+            res.end(response.body);
+            return;
           }
 
-          return router.route(request);
-        },
-      });
+          router.route(req).then(async (routeHandlerResult) => {
+            let response: Response = routeHandlerResult as Response;
+            if (!(routeHandlerResult instanceof Response)) {
+              // assume response is a JSON object
+              response = new ResponseWithCors(JSON.stringify(routeHandlerResult));
+            }
 
-  logger.log(`EIFFEL API listening on ${server.hostname}:${server.port}`);
+            res.writeHead(
+              response.status,
+              response.headers as unknown as http.OutgoingHttpHeaders,
+            );
+            res.end(JSON.stringify(await response.json()));
+          });
+        })
+        .listen(env.API_PORT);
+
+  server.on('listening', () => {
+    logger.log(`EIFFEL API listening on ${JSON.stringify(server.address())}`);
+    apiEventEmitter.emit('listening', server.address());
+  });
 
   process.on('exit', () => {
     db.disconnect();
     process.exit();
   });
+
+  return apiEventEmitter;
 };
 
-if (import.meta.main) {
+if (isEsMain(import.meta)) {
   runEiffelApi();
 }
