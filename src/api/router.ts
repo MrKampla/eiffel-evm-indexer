@@ -13,8 +13,8 @@ export type Handler = (
 
 const findClosestNodeModulesPath = (dir: string): string => {
   if (fs.existsSync(`${dir}/node_modules`)) {
-    if (fs.existsSync(`${dir}/node_modules/eiffel-evm-indexer`)) {
-      return `${dir}/node_modules/eiffel-evm-indexer`;
+    if (fs.existsSync(`${dir}/node_modules/eiffel-evm-indexer/dist`)) {
+      return `${dir}/node_modules/eiffel-evm-indexer/dist`;
     }
     return `${dir}/dist`;
   }
