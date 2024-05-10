@@ -15,8 +15,6 @@ export const ApiEnvSchema = z.object({
 
 export type ApiEnv = z.infer<typeof ApiEnvSchema>;
 
-let cachedEnv: ApiEnv;
-
 /**
  * First checks if the env is already cached, if it is then it is returned. If env is not cached, it reads the env variables
  * from the .env file and the targets.json file and also overrides passed by the user (only when running programatically,
@@ -25,10 +23,6 @@ let cachedEnv: ApiEnv;
  * @returns The env object
  */
 export const getApiEnv = (overrides: Partial<ApiEnv> = {}): ApiEnv => {
-  if (cachedEnv) {
-    return cachedEnv;
-  }
-
   config();
 
   const env = ApiEnvSchema.parse({
@@ -48,7 +42,10 @@ export const getApiEnv = (overrides: Partial<ApiEnv> = {}): ApiEnv => {
     throw new Error('mogno DB_NAME is not set');
   }
 
-  cachedEnv = env as ApiEnv;
+  process.env = {
+    ...process.env,
+    ...(env as any),
+  };
 
-  return cachedEnv;
+  return env as ApiEnv;
 };

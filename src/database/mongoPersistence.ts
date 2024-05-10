@@ -1,4 +1,4 @@
-import { MongoClient, Db, Collection, Document, Filter } from 'mongodb';
+import { MongoClient, Db, Collection, Document, Filter, ObjectId } from 'mongodb';
 import { EventLog, PersistenceObject } from '../types';
 import { createUniqueIdForEvent } from '../utils/createUniqueIdForEvent';
 import { logger } from '../utils/logger';
@@ -101,8 +101,13 @@ export class MongoDBPersistence implements PersistenceObject {
         await this.db.dropCollection(this.indexingCollectionName);
       logger.log(`Dropped collections`);
     }
-    if (!collections.some((col) => col.name === this.eventsCollectionName))
+    if (!collections.some((col) => col.name === this.eventsCollectionName)) {
       await this.db.createCollection(this.eventsCollectionName);
+
+      await this.db
+        .collection(this.eventsCollectionName)
+        .createIndex({ id: 1 }, { unique: true });
+    }
     if (!collections.some((col) => col.name === this.indexingCollectionName))
       await this.db.createCollection(this.indexingCollectionName);
     logger.log(`Initialized collections`);
@@ -131,7 +136,15 @@ export class MongoDBPersistence implements PersistenceObject {
       args: serialize(event.args),
     }));
 
-    await eventsCollection.insertMany(transformedEvents, { ordered: false });
+    await eventsCollection.bulkWrite(
+      transformedEvents.map((event) => ({
+        updateOne: {
+          filter: { id: event.id },
+          update: { $set: event },
+          upsert: true,
+        },
+      })),
+    );
 
     await indexingStatusCollection.updateOne(
       { chainId: this.chainId.toString() },

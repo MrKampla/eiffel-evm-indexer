@@ -1,7 +1,7 @@
 {
   "name": "eiffel-evm-indexer",
   "type": "module",
-  "version": "2.0.0-beta.0",
+  "version": "2.0.0",
   "bin": {
     "eiffel-evm-indexer": "./dist/cli.js",
     "eiffel": "./dist/cli.js"
@@ -39,19 +39,18 @@
     "posttsc": "cp -r dist/src/ dist/ && rm -rf dist/src",
     "prepublishOnly": "pnpm run build",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test ./tests/*.ts"
+    "test": "vitest --sequence.concurrent run ./tests/*.test.ts "
   },
   "devDependencies": {
     "@testcontainers/mongodb": "^10.9.0",
     "@testcontainers/postgresql": "^10.9.0",
     "@types/bun": "^1.1.1",
-    "@types/chai": "^4.3.16",
     "@types/node": "^20.10.6",
-    "chai": "^5.1.0",
     "hardhat": "^2.22.3",
     "prettier": "^3.0.3",
     "tsup": "^8.0.2",
-    "tsx": "^4.8.2"
+    "tsx": "^4.8.2",
+    "vitest": "^1.6.0"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"

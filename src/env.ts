@@ -4,18 +4,23 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { config } from 'dotenv';
 
+const targetsSchema = z.array(
+  z.object({
+    address: z.string(),
+    abiItem: z.object({
+      type: z.enum(['event']),
+      anonymous: z.boolean().optional(),
+      inputs: z.array(z.any()),
+      name: z.string(),
+    }),
+  }),
+);
+
 export const EnvSchema = z.object({
   // REQUIRED
   CHAIN_ID: z.number(),
   CHAIN_RPC_URLS: z.array(z.string()).min(1),
-  TARGETS: z.array(
-    z.object({
-      address: z.string().startsWith('0x'),
-      abiItem: z.object({
-        type: z.enum(['event']),
-      }),
-    }),
-  ),
+  TARGETS: targetsSchema,
   START_FROM_BLOCK: z.bigint(),
   // OPTIONAL
   BLOCK_CONFIRMATIONS: z.bigint().optional().default(5n),
@@ -29,21 +34,14 @@ export const EnvSchema = z.object({
   REORG_REFETCH_DEPTH: z.bigint().optional().default(0n),
 });
 
-export type Env = z.infer<typeof EnvSchema> & {
+export type Env = Omit<z.infer<typeof EnvSchema>, 'TARGETS'> & {
   TARGETS: IndexerTarget[];
 };
 
 const getTargets = (overrides: Partial<Env> = {}) => {
-  if (overrides.TARGETS) {
-    const targetSchema = z.array(
-      z.object({
-        address: z.string(),
-        abiItem: z.object({
-          type: z.enum(['event']),
-        }),
-      }),
-    );
-    return targetSchema.parse(overrides.TARGETS);
+  if (overrides.TARGETS || Array.isArray(process.env.TARGETS)) {
+    targetsSchema.parse(overrides.TARGETS || process.env.TARGETS);
+    return overrides.TARGETS || process.env.TARGETS;
   }
 
   const targetsPath = path.join(process.cwd(), './targets.json');
@@ -53,18 +51,10 @@ const getTargets = (overrides: Partial<Env> = {}) => {
     );
   }
   const TARGETS = JSON.parse(fs.readFileSync(targetsPath).toString()) as IndexerTarget[];
-  const targetSchema = z.array(
-    z.object({
-      address: z.string(),
-      abiItem: z.object({
-        type: z.enum(['event']),
-      }),
-    }),
-  );
-  return targetSchema.parse(TARGETS);
-};
 
-let cachedEnv: Env;
+  targetsSchema.parse(TARGETS);
+  return TARGETS;
+};
 
 /**
  * First checks if the env is already cached, if it is then it is returned. If env is not cached, it reads the env variables
@@ -74,16 +64,12 @@ let cachedEnv: Env;
  * @returns The env object
  */
 export const getEnv = (overrides: Partial<Env> = {}): Env => {
-  if (cachedEnv) {
-    return cachedEnv;
-  }
-
   config();
 
   const env = EnvSchema.parse({
     ...process.env,
     CHAIN_RPC_URLS:
-      overrides.CHAIN_RPC_URLS ?? JSON.parse(process.env.CHAIN_RPC_URLS as string),
+      overrides.CHAIN_RPC_URLS ?? JSON.parse(JSON.stringify(process.env.CHAIN_RPC_URLS)),
     START_FROM_BLOCK: overrides.START_FROM_BLOCK ?? BigInt(process.env.START_FROM_BLOCK!),
     BLOCK_CONFIRMATIONS:
       overrides.BLOCK_CONFIRMATIONS ?? BigInt(process.env.BLOCK_CONFIRMATIONS!),
@@ -103,7 +89,9 @@ export const getEnv = (overrides: Partial<Env> = {}): Env => {
     throw new Error('mogno DB_NAME is not set');
   }
 
-  cachedEnv = env as Env;
-
-  return cachedEnv;
+  process.env = {
+    ...process.env,
+    ...(env as any),
+  };
+  return env as Env;
 };

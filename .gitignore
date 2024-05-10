@@ -175,5 +175,6 @@ dist
 .DS_Store
 
 events.db
+test.db
 tsconfig.tsbuildinfo
 targets.json

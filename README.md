@@ -13,6 +13,7 @@ event is indexed and query the data however you want in your custom API endpoint
   - [How to run](#how-to-run)
   - [Deployment](#deployment)
     - [Programmatic start](#programmatic-start)
+    - [ABI Parser Tool](#abi-parser-tool)
   - [Querying data](#querying-data)
     - [Filters (EQ, EQCI (case insensitive equals), LT, LTE, GT, GTE, NEQ, IN, NOTIN)](#filters-eq-eqci-case-insensitive-equals-lt-lte-gt-gte-neq-in-notin)
     - [Pagination (limit, offset)](#pagination-limit-offset)
@@ -179,8 +180,6 @@ api.on('listening', () => {
 });
 ```
 
-````ts
-
 ### ABI Parser Tool
 
 Eiffel comes with an ABI parser tool that can be used to generate a list of targets for indexer based on the contracts ABI.
@@ -189,7 +188,7 @@ Eiffel comes with an ABI parser tool that can be used to generate a list of targ
 
 ```bash
 eiffel create:targets -a <path to ABI file> -e <event names to index separated by space>
-````
+```
 
 example:
 

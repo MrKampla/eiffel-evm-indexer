@@ -1,24 +1,25 @@
-import { describe, it, before, after } from 'node:test';
-import { expect } from 'chai';
+import { describe, it, beforeAll, afterAll, expect } from 'vitest';
 import { MongoDBContainer, StartedMongoDBContainer } from '@testcontainers/mongodb';
 import { runEiffelApi } from '../src/api';
 import { runEiffelIndexer } from '../src';
+import { setTimeout } from 'node:timers/promises';
+import { getTestIndexerEnvs } from './testUtils';
 
 describe('MongoDB tests', () => {
   let mongoContainer: StartedMongoDBContainer;
-  before(async () => {
+
+  beforeAll(async () => {
     mongoContainer = await new MongoDBContainer('mongo:6.0.15').start();
   });
 
-  after(async () => {
+  afterAll(async () => {
     await mongoContainer.stop();
-    process.exit();
   });
 
   it('should connect to mongoDb, migrate and return', async () => {
     const indexer = await runEiffelIndexer({
-      CLEAR_DB: true,
-      CHAIN_ID: 137,
+      ...getTestIndexerEnvs(),
+      DB_NAME: 'default',
       DB_URL: `${mongoContainer.getConnectionString()}/default`,
       DB_TYPE: 'mongo',
       DB_SSL: false,
@@ -38,9 +39,19 @@ describe('MongoDB tests', () => {
     });
 
     await new Promise((resolve) => api.on('listening', resolve));
+    await setTimeout(250); // wait for events to be indexed
 
     expect(
-      await (await fetch('http://localhost:8082/api/events')).json(),
-    ).to.be.deep.equal([]);
+      ((await (await fetch('http://localhost:8082/api/events')).json()) as any[]).map(
+        (e) => e.eventName,
+      ),
+    ).to.be.deep.equal(['Initialized', 'DataEvent', 'DataEvent']);
+
+    expect(
+      (await (await fetch('http://localhost:8082/api/indexing_status')).json())[0],
+    ).to.be.deep.include({
+      blockNumber: '3',
+      chainId: '31337',
+    });
   });
 });

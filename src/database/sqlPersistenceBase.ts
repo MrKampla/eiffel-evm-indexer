@@ -1,13 +1,17 @@
-import knexPkg, { Knex } from 'knex';
-const { knex } = knexPkg;
+import * as Knex from 'knex';
+import type { Knex as KnexType } from 'knex';
 import { EventLog, PersistenceObject } from '../types';
 import { FilterOperators, FilterType, SortClause, WhereClause } from './filters';
 
+type QueryBuilderOrderByRaw = {
+  orderByRaw: (raw: string) => void;
+} & Knex.QueryBuilder;
+
 export abstract class SqlPersistenceBase implements PersistenceObject {
-  protected readonly _knexClient: Knex;
+  protected readonly _knexClient: KnexType;
 
   constructor(client: 'pg' | 'better-sqlite3', dbUrl: string, dbSsl: boolean) {
-    this._knexClient = knex({
+    this._knexClient = Knex.knex({
       client,
       useNullAsDefault: true,
       connection:
@@ -20,7 +24,7 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
     });
   }
 
-  public getUnderlyingDataSource(): Knex {
+  public getUnderlyingDataSource(): Knex.Knex {
     return this._knexClient;
   }
 
@@ -82,9 +86,11 @@ export abstract class SqlPersistenceBase implements PersistenceObject {
         ? this.getJsonObjectPropertySqlFragment('args', clause.field.slice(5))
         : `${table}."${clause.field}"`;
       if (clause.type == FilterType.TEXT) {
-        (query as Knex.QueryBuilder).orderByRaw(`${queriedField} ${clause.direction}`);
+        (query as QueryBuilderOrderByRaw).orderByRaw(
+          `${queriedField} ${clause.direction}`,
+        );
       } else {
-        (query as Knex.QueryBuilder).orderByRaw(
+        (query as QueryBuilderOrderByRaw).orderByRaw(
           `${this.castAsNumericWhenRequested(queriedField, clause.type)} ${
             clause.direction
           }`,

@@ -41,7 +41,6 @@ export class EventLogsFetcher implements EventsFetcher {
       }
 
       logger.log(`Fetching from ${currentBlock} to ${toBlock}`);
-
       const logs = await this.publicClient.getLogs({
         address: targets.map((target) => target.address),
         events: targets.map((target) => target.abiItem),
