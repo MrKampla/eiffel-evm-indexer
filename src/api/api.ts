@@ -4,7 +4,6 @@ import { PersistenceObject } from '../types.js';
 import { getDb } from '../utils/getDb.js';
 import { logger } from '../utils/logger.js';
 import { ResponseWithCors } from './responseWithCors.js';
-import { createGraphqlServer } from './graphql/index.js';
 import http from 'node:http';
 import isEsMain from 'es-main';
 import EventEmitter from 'node:events';
@@ -30,12 +29,14 @@ export const runEiffelApi = async (
 
   const apiEventEmitter = new EventEmitter<EiffelApiEvents>();
 
-  const yoga = createGraphqlServer(db);
-
   const router = await createFileSystemBasedRouter(db);
 
   const server = env.GPAPHQL
-    ? http.createServer(yoga.fetch.bind(yoga)).listen(env.API_PORT)
+    ? await (async () => {
+        const { createGraphqlServer } = await import('./graphql/index.js');
+        const yoga = createGraphqlServer(db);
+        return http.createServer(yoga.fetch.bind(yoga)).listen(env.API_PORT);
+      })()
     : http
         .createServer((req, res) => {
           // Handle CORS preflight requests

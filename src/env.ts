@@ -3,6 +3,7 @@ import { z } from 'zod';
 import fs from 'node:fs';
 import path from 'node:path';
 import { config } from 'dotenv';
+import { prepareEnv } from './utils/prepareEnv.js';
 
 const targetsSchema = z.array(
   z.object({
@@ -16,7 +17,7 @@ const targetsSchema = z.array(
   }),
 );
 
-export const EnvSchema = z.object({
+const envObj = {
   // REQUIRED
   CHAIN_ID: z.number(),
   CHAIN_RPC_URLS: z.array(z.string()).min(1),
@@ -32,7 +33,9 @@ export const EnvSchema = z.object({
   CLEAR_DB: z.boolean().optional().default(true),
   DB_NAME: z.string().optional(),
   REORG_REFETCH_DEPTH: z.bigint().optional().default(0n),
-});
+};
+
+export const EnvSchema = z.object(envObj);
 
 export type Env = Omit<z.infer<typeof EnvSchema>, 'TARGETS'> & {
   TARGETS: IndexerTarget[];
@@ -56,17 +59,6 @@ const getTargets = (overrides: Partial<Env> = {}) => {
   return TARGETS;
 };
 
-const getChainRpcUrls = (overrides: Partial<Env> = {}) => {
-  if (overrides.CHAIN_RPC_URLS || Array.isArray(process.env.CHAIN_RPC_URLS)) {
-    return overrides.CHAIN_RPC_URLS || process.env.CHAIN_RPC_URLS;
-  }
-
-  if (process.env.CHAIN_RPC_URLS) {
-    return JSON.parse(process.env.CHAIN_RPC_URLS);
-  }
-  return undefined;
-};
-
 /**
  * First checks if the env is already cached, if it is then it is returned. If env is not cached, it reads the env variables
  * from the .env file and the targets.json file and also overrides passed by the user (only when running programatically,
@@ -77,27 +69,12 @@ const getChainRpcUrls = (overrides: Partial<Env> = {}) => {
 export const getEnv = (overrides: Partial<Env> = {}): Env => {
   config();
 
-  const env = EnvSchema.parse({
+  const preparedEnv = prepareEnv(EnvSchema.shape, {
     ...process.env,
     ...overrides,
-    CHAIN_RPC_URLS: getChainRpcUrls(overrides),
-    START_FROM_BLOCK:
-      overrides.START_FROM_BLOCK ?? process.env.START_FROM_BLOCK
-        ? BigInt(process.env.START_FROM_BLOCK!)
-        : undefined,
-    BLOCK_CONFIRMATIONS:
-      overrides.BLOCK_CONFIRMATIONS ?? process.env.BLOCK_CONFIRMATIONS
-        ? BigInt(process.env.BLOCK_CONFIRMATIONS!)
-        : undefined,
-    BLOCK_FETCH_INTERVAL:
-      overrides.BLOCK_FETCH_INTERVAL ?? Number(process.env.BLOCK_FETCH_INTERVAL),
-    BLOCK_FETCH_BATCH_SIZE:
-      overrides.BLOCK_FETCH_BATCH_SIZE ?? process.env.BLOCK_FETCH_BATCH_SIZE
-        ? BigInt(process.env.BLOCK_FETCH_BATCH_SIZE!)
-        : undefined,
-    CHAIN_ID: overrides.CHAIN_ID ?? Number(process.env.CHAIN_ID),
     TARGETS: getTargets(overrides),
   });
+  EnvSchema.parse(preparedEnv);
 
   if (process.env.DB_TYPE === 'postgres' && !process.env.DB_URL) {
     throw new Error('postgres DB_URL not set');
@@ -107,9 +84,5 @@ export const getEnv = (overrides: Partial<Env> = {}): Env => {
     throw new Error('mogno DB_NAME is not set');
   }
 
-  process.env = {
-    ...process.env,
-    ...(env as any),
-  };
-  return env as Env;
+  return preparedEnv as Env;
 };

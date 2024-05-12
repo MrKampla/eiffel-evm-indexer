@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { config } from 'dotenv';
+import { prepareEnv } from '../utils/prepareEnv.js';
 
 export const ApiEnvSchema = z.object({
   // REQUIRED
@@ -25,14 +26,11 @@ export type ApiEnv = z.infer<typeof ApiEnvSchema>;
 export const getApiEnv = (overrides: Partial<ApiEnv> = {}): ApiEnv => {
   config();
 
-  const env = ApiEnvSchema.parse({
+  const env = prepareEnv(ApiEnvSchema.shape, {
     ...process.env,
     ...overrides,
-    CHAIN_ID: overrides.CHAIN_ID ?? Number(process.env.CHAIN_ID),
-    API_PORT: overrides.API_PORT ?? Number(process.env.API_PORT),
-    DB_SSL: overrides.DB_SSL ?? process.env.DB_SSL === 'true',
-    GRAPHQL: overrides.GPAPHQL ?? process.env.GPAPHQL === 'true',
   });
+  ApiEnvSchema.parse(env);
 
   if (process.env.DB_TYPE === 'postgres' && !process.env.DB_URL) {
     throw new Error('postgres DB_URL not set');
