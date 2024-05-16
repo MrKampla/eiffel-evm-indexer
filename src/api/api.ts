@@ -59,7 +59,10 @@ export const runEiffelApi = async (
 
             res.writeHead(
               response.status,
-              response.headers as unknown as http.OutgoingHttpHeaders,
+              [...response.headers].reduce((acc, [key, val]) => {
+                acc[key] = val;
+                return acc;
+              }, {} as http.OutgoingHttpHeaders),
             );
             res.end(JSON.stringify(await response.json()));
           });
@@ -82,3 +85,12 @@ export const runEiffelApi = async (
 if (isEsMain(import.meta)) {
   runEiffelApi();
 }
+
+process.on('unhandledRejection', (reason) => {
+  console.error(reason);
+  process.exit(1);
+});
+process.on('uncaughtException', (error) => {
+  console.error(error);
+  process.exit(1);
+});

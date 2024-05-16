@@ -37,3 +37,12 @@ program
   });
 
 program.parse(process.argv);
+
+process.on('unhandledRejection', (error) => {
+  console.error(error);
+  process.exit(1);
+});
+process.on('uncaughtException', (error) => {
+  console.error(error);
+  process.exit(1);
+});
