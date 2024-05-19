@@ -8,10 +8,40 @@ import http from 'node:http';
 import isEsMain from 'es-main';
 import EventEmitter from 'node:events';
 import { AddressInfo } from 'node:net';
+import { Readable } from 'stream';
 
 export type EiffelApiEvents = {
   listening: [string | AddressInfo | null];
 };
+
+const handlerResponseToServerResponse = (
+  handlerResponse: Response,
+  serverResponse: http.ServerResponse,
+) => {
+  serverResponse.writeHead(
+    handlerResponse.status,
+    [...handlerResponse.headers].reduce((acc, [key, val]) => {
+      acc[key] = val;
+      return acc;
+    }, {} as http.OutgoingHttpHeaders),
+  );
+};
+
+function incommingMessageToWebRequest(incomingMessage: http.IncomingMessage): Request {
+  const env = getApiEnv();
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(incomingMessage.headers)) {
+    headers.append(key, value as string);
+  }
+  return new Request(`http://localhost:${env.API_PORT}${incomingMessage.url}`, {
+    method: incomingMessage.method,
+    headers: headers,
+    body:
+      incomingMessage.method === 'GET' || incomingMessage.method === 'HEAD'
+        ? null
+        : (Readable.from(incomingMessage) as unknown as BodyInit),
+  });
+}
 
 export const runEiffelApi = async (
   props: Partial<ApiEnv> = {},
@@ -31,19 +61,6 @@ export const runEiffelApi = async (
 
   const router = await createFileSystemBasedRouter(db);
 
-  const writeResponseHead = (
-    serverResponse: http.ServerResponse,
-    handlerResponse: Response,
-  ) => {
-    serverResponse.writeHead(
-      handlerResponse.status,
-      [...handlerResponse.headers].reduce((acc, [key, val]) => {
-        acc[key] = val;
-        return acc;
-      }, {} as http.OutgoingHttpHeaders),
-    );
-  };
-
   const server = env.GPAPHQL
     ? await (async () => {
         const { createGraphqlServer } = await import('./graphql/index.js');
@@ -55,21 +72,25 @@ export const runEiffelApi = async (
           // Handle CORS preflight requests
           if (req.method === 'OPTIONS') {
             const handlerResponse = new ResponseWithCors('Departed');
-            writeResponseHead(res, handlerResponse);
+            handlerResponseToServerResponse(handlerResponse, res);
             res.end(await handlerResponse.text());
             return;
           }
 
-          router.route(req).then(async (routeHandlerResult) => {
-            let handlerResponse: Response = routeHandlerResult as Response;
-            if (!(routeHandlerResult instanceof Response)) {
-              // assume response is a JSON object
-              handlerResponse = new ResponseWithCors(JSON.stringify(routeHandlerResult));
-            }
+          router
+            .route(incommingMessageToWebRequest(req))
+            .then(async (routeHandlerResult) => {
+              let handlerResponse: Response = routeHandlerResult as Response;
+              if (!(routeHandlerResult instanceof Response)) {
+                // assume response is a JSON object
+                handlerResponse = new ResponseWithCors(
+                  JSON.stringify(routeHandlerResult),
+                );
+              }
 
-            writeResponseHead(res, handlerResponse);
-            res.end(JSON.stringify(await handlerResponse.json()));
-          });
+              handlerResponseToServerResponse(handlerResponse, res);
+              res.end(JSON.stringify(await handlerResponse.json()));
+            });
         })
         .listen(env.API_PORT);
 
