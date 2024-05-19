@@ -1,7 +1,7 @@
 {
   "name": "eiffel-evm-indexer",
   "type": "module",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "bin": {
     "eiffel-evm-indexer": "./dist/cli.js",
     "eiffel": "./dist/cli.js"
@@ -39,7 +39,7 @@
     "posttsc": "cp -r dist/src/ dist/ && rm -rf dist/src",
     "prepublishOnly": "pnpm run build",
     "typecheck": "tsc --noEmit",
-    "test": "vitest --sequence.concurrent run ./tests/*.test.ts "
+    "test": "vitest --sequence.concurrent run ./tests/*.test.ts"
   },
   "devDependencies": {
     "@testcontainers/mongodb": "^10.9.0",

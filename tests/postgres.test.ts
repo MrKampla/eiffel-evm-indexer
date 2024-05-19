@@ -13,7 +13,7 @@ describe('Postgres tests', () => {
 
   beforeAll(async () => {
     postgresContainer = await new PostgreSqlContainer().start();
-  });
+  }, 30_000);
 
   afterAll(async () => {
     await postgresContainer.stop();
@@ -40,6 +40,7 @@ describe('Postgres tests', () => {
       DB_URL: postgresContainer.getConnectionUri(),
       DB_NAME: postgresContainer.getDatabase(),
       CHAIN_ID: 31337,
+      DB_SSL: false,
     });
 
     await new Promise((resolve) => api.on('listening', resolve));

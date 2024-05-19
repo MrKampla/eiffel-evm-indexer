@@ -2,7 +2,7 @@ import { OutgoingHttpHeaders } from 'node:http';
 const CORS_HEADERS = {
   headers: {
     'access-control-allow-origin': '*',
-    'access-control-allow-methods': 'OPTIONS, POST',
+    'access-control-allow-methods': 'OPTIONS, HEAD, GET, POST, PUT, PATCH, DELETE',
     'access-control-allow-headers': 'Content-Type',
     'content-type': 'application/json',
   } as OutgoingHttpHeaders,

@@ -1,6 +1,4 @@
-import knexPkg from 'knex';
-// knex is a CommonJS module, so we need to use this syntax to import it
-const { knex } = knexPkg;
+import knex from 'knex';
 import type { Knex as KnexType } from 'knex';
 import { EventLog, PersistenceObject } from '../types.js';
 import { FilterOperators, FilterType, SortClause, WhereClause } from './filters.js';

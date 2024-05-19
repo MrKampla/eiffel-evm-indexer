@@ -5,7 +5,7 @@ import { BIGINT_MATH } from '../utils/bigIntMath.js';
 import { createUniqueIdForEvent } from '../utils/createUniqueIdForEvent.js';
 import { logger } from '../utils/logger.js';
 import { SqlPersistenceBase } from './sqlPersistenceBase.js';
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
 import { safeAsync } from '../utils/safeAsync.js';
 
 export class SqlitePersistence extends SqlPersistenceBase {

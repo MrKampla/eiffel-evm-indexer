@@ -3,6 +3,7 @@ import { z } from 'zod';
 import fs from 'node:fs';
 import path from 'node:path';
 import { config } from 'dotenv';
+config();
 import { prepareEnv } from './utils/prepareEnv.js';
 
 const targetsSchema = z.array(
@@ -59,6 +60,10 @@ const getTargets = (overrides: Partial<Env> = {}) => {
   return TARGETS;
 };
 
+declare global {
+  var preparedEnv: Env;
+}
+
 /**
  * First checks if the env is already cached, if it is then it is returned. If env is not cached, it reads the env variables
  * from the .env file and the targets.json file and also overrides passed by the user (only when running programatically,
@@ -67,7 +72,7 @@ const getTargets = (overrides: Partial<Env> = {}) => {
  * @returns The env object
  */
 export const getEnv = (overrides: Partial<Env> = {}): Env => {
-  config();
+  if (globalThis.preparedEnv) return globalThis.preparedEnv as Env;
 
   const preparedEnv = prepareEnv(EnvSchema.shape, {
     ...process.env,
@@ -83,6 +88,8 @@ export const getEnv = (overrides: Partial<Env> = {}): Env => {
   if (process.env.DB_TYPE === 'mongo' && !process.env.DB_NAME?.length) {
     throw new Error('mogno DB_NAME is not set');
   }
+
+  globalThis.preparedEnv = preparedEnv as Env;
 
   return preparedEnv as Env;
 };

@@ -31,6 +31,19 @@ export const runEiffelApi = async (
 
   const router = await createFileSystemBasedRouter(db);
 
+  const writeResponseHead = (
+    serverResponse: http.ServerResponse,
+    handlerResponse: Response,
+  ) => {
+    serverResponse.writeHead(
+      handlerResponse.status,
+      [...handlerResponse.headers].reduce((acc, [key, val]) => {
+        acc[key] = val;
+        return acc;
+      }, {} as http.OutgoingHttpHeaders),
+    );
+  };
+
   const server = env.GPAPHQL
     ? await (async () => {
         const { createGraphqlServer } = await import('./graphql/index.js');
@@ -38,33 +51,24 @@ export const runEiffelApi = async (
         return http.createServer(yoga.fetch.bind(yoga)).listen(env.API_PORT);
       })()
     : http
-        .createServer((req, res) => {
+        .createServer(async (req, res) => {
           // Handle CORS preflight requests
           if (req.method === 'OPTIONS') {
-            const response = new ResponseWithCors('Departed');
-            res.writeHead(
-              response.status,
-              response.headers as unknown as http.OutgoingHttpHeaders,
-            );
-            res.end(response.body);
+            const handlerResponse = new ResponseWithCors('Departed');
+            writeResponseHead(res, handlerResponse);
+            res.end(await handlerResponse.text());
             return;
           }
 
           router.route(req).then(async (routeHandlerResult) => {
-            let response: Response = routeHandlerResult as Response;
+            let handlerResponse: Response = routeHandlerResult as Response;
             if (!(routeHandlerResult instanceof Response)) {
               // assume response is a JSON object
-              response = new ResponseWithCors(JSON.stringify(routeHandlerResult));
+              handlerResponse = new ResponseWithCors(JSON.stringify(routeHandlerResult));
             }
 
-            res.writeHead(
-              response.status,
-              [...response.headers].reduce((acc, [key, val]) => {
-                acc[key] = val;
-                return acc;
-              }, {} as http.OutgoingHttpHeaders),
-            );
-            res.end(JSON.stringify(await response.json()));
+            writeResponseHead(res, handlerResponse);
+            res.end(JSON.stringify(await handlerResponse.json()));
           });
         })
         .listen(env.API_PORT);

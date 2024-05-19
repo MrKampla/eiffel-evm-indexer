@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { config } from 'dotenv';
+config();
 import { prepareEnv } from '../utils/prepareEnv.js';
 
 export const ApiEnvSchema = z.object({
@@ -16,6 +17,10 @@ export const ApiEnvSchema = z.object({
 
 export type ApiEnv = z.infer<typeof ApiEnvSchema>;
 
+declare global {
+  var preparedApiEnv: ApiEnv;
+}
+
 /**
  * First checks if the env is already cached, if it is then it is returned. If env is not cached, it reads the env variables
  * from the .env file and the targets.json file and also overrides passed by the user (only when running programatically,
@@ -24,7 +29,7 @@ export type ApiEnv = z.infer<typeof ApiEnvSchema>;
  * @returns The env object
  */
 export const getApiEnv = (overrides: Partial<ApiEnv> = {}): ApiEnv => {
-  config();
+  if (globalThis.preparedApiEnv) return globalThis.preparedApiEnv as ApiEnv;
 
   const env = prepareEnv(ApiEnvSchema.shape, {
     ...process.env,
@@ -44,6 +49,8 @@ export const getApiEnv = (overrides: Partial<ApiEnv> = {}): ApiEnv => {
     ...process.env,
     ...(env as any),
   };
+
+  globalThis.preparedApiEnv = env as ApiEnv;
 
   return env as ApiEnv;
 };

@@ -10,7 +10,7 @@ describe('MongoDB tests', () => {
 
   beforeAll(async () => {
     mongoContainer = await new MongoDBContainer('mongo:6.0.15').start();
-  });
+  }, 30_000);
 
   afterAll(async () => {
     await mongoContainer.stop();
@@ -32,10 +32,12 @@ describe('MongoDB tests', () => {
     );
 
     const api = await runEiffelApi({
+      CHAIN_ID: 31337,
       API_PORT: 8082,
       DB_TYPE: 'mongo',
       DB_URL: `${mongoContainer.getConnectionString()}/default`,
       DB_SSL: false,
+      DB_NAME: 'default',
     });
 
     await new Promise((resolve) => api.on('listening', resolve));
