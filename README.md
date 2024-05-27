@@ -260,12 +260,13 @@ Requests to the `/api/events` endpoint are configurable with following query par
 
 ### Filters (EQ, EQCI (case insensitive equals), LT, LTE, GT, GTE, NEQ, IN, NOTIN)
 
-- `/api/events?where=address:EQ:0x2791bca1f2de4661ed88a30c99a7a9449aa84174&where=blockNumber:GT:NUM:48358310` => queries for a specific address and block number greater than specified number
-- `/api/events?where=address:EQ:0x2791bca1f2de4661ed88a30c99a7a9449aa84174,blockNumber:GT:NUM:48358310`
-- `/api/events?where=args_from:NEQ:0x25aB3Efd52e6470681CE037cD546Dc60726948D3,args_value:EQ:1053362095,blockNumber:GT:NUM:48358310` => queries
 - `/api/events?where=blockNumber:IN:NUM:1_2_3_4` => queries for block numbers 1, 2, 3 and 4
 - `/api/events?where=blockNumber:NOTIN:NUM:1_2_3_4` => queries for block numbers that are not 1, 2, 3 or 4
 - `/api/events?where=address:EQCI:0x2791bca1f2de4661ed88a30c99a7a9449aa84174` => case insensitive equals
+
+You can also merge conditions together with a comma `,` in order to build more complex queries:
+- `/api/events?where=address:EQ:0x2791bca1f2de4661ed88a30c99a7a9449aa84174,blockNumber:GT:NUM:48358310` => queries for a specific address AND block number greater than specified number
+- `/api/events?where=args_from:NEQ:0x25aB3Efd52e6470681CE037cD546Dc60726948D3,args_value:EQ:1053362095,blockNumber:GT:NUM:48358310` => queries for transactions where argument `from` is not equal to a specific value AND `value` param is equal a specific amount AND block number is greater than a specific value
 
 ### Pagination (limit, offset)
 
