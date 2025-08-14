@@ -1,7 +1,7 @@
 {
   "name": "eiffel-evm-indexer",
   "type": "module",
-  "version": "2.0.6",
+  "version": "2.0.7",
   "bin": {
     "eiffel-evm-indexer": "./dist/cli.js",
     "eiffel": "./dist/cli.js"
